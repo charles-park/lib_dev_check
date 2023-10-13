@@ -145,7 +145,7 @@ int system_grp_init (char *cfg_line)
     if (strncmp (CFG_GROUP_STR, cfg_line, strlen(CFG_GROUP_STR)))
         return 0;
 
-#if defined(__LIB_DEV_TEST_APP__)
+#if defined(__LIB_DEV_CHECK_APP__)
     printf ("%s : CFG_LINE = %s\n", __func__, cfg_line);
 #endif
 
@@ -171,9 +171,12 @@ int system_grp_init (char *cfg_line)
     // action type
     if ((ptr = strtok (NULL, ",")) != NULL)
         action = action_to_enum(*ptr);
-    // compare value
+    // compare value or max
     if ((ptr = strtok (NULL, ",")) != NULL)
         SystemGrp[dev_id].value[action] = atoi (ptr);
+    // compare min value
+    if ((ptr = strtok (NULL, ",")) != NULL)
+        SystemGrp[dev_id].min[action] = atoi (ptr);
 
     return 1;
 }

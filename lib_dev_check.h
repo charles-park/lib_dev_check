@@ -28,11 +28,11 @@
 struct msg_info {
     char    start;
     char    cmd;
-    char    ui_id [SIZE_UI_ID];
-    char    gid [SIZE_GID];
-    char    dev_id [SIZE_DEV_ID];
+    char    ui_id[SIZE_UI_ID];
+    char    gid[SIZE_GID];
+    char    dev_id[SIZE_DEV_ID];
     char    action;
-    char    resp_delay [SIZE_R_DELAY];
+    char    resp_delay[SIZE_R_DELAY];
     char    end;
 }   __attribute__((packed));
 
@@ -71,8 +71,9 @@ struct device_info {
     int     id;
     char    name [STR_NAME_LENGTH];
     char    path [STR_PATH_LENGTH];
-    // 해당 Action에 따른 비교값 저장, Action list(C, S, L, R, W, -, NUM)
+    // 해당 Action에 따른 비교값 또는 최대값 저장, Action list(C, S, L, R, W, -, NUM)
     int     value[eACTION_END];
+    int     min[eACTION_END];
 };
 
 //------------------------------------------------------------------------------

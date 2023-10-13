@@ -1,9 +1,9 @@
 #
-# lib_gpio
+# lib_dev_check
 #
 CC      = gcc
 CFLAGS  = -W -Wall -g
-CFLAGS  += -D__LIB_DEV_TEST_APP__
+CFLAGS  += -D__LIB_DEV_CHECK_APP__
 
 INCLUDE = -I/usr/local/include
 LDFLAGS = -L/usr/local/lib -lpthread
