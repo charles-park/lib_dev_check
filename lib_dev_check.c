@@ -34,42 +34,9 @@
 
 //------------------------------------------------------------------------------
 #include "0.system/system.h"
-
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-// Client HDMI connect to VU8s (1280x800)
-#define DEFAULT_PATH        "/sys/class/graphics/fb0/virtual_size"
-#define DEFAULT_X_RES       1280
-#define DEFAULT_Y_RES       800
-
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-int action_to_enum (char action)
-{
-    switch (toupper(action)) {
-        case 'C':   return  eACTION_C;
-        case 'S':   return  eACTION_S;
-        case 'L':   return  eACTION_L;
-        case 'R':   return  eACTION_R;
-        case 'W':   return  eACTION_W;
-        case '-':   return  eACTION_NONE;
-        default :   return  eACTION_NUM;
-    }
-}
-
-//------------------------------------------------------------------------------
-char enum_to_action (int int_enum)
-{
-    switch (int_enum) {
-        case eACTION_C:     return  'C';
-        case eACTION_S:     return  'S';
-        case eACTION_L:     return  'L';
-        case eACTION_R:     return  'R';
-        case eACTION_W:     return  'W';
-        case eACTION_NONE:  return  '-';
-        default :           return  (int_enum - '0');
-    }
-}
+#include "1.storage/storage.h"
+#include "2.usb/usb.h"
+#include "4.adc/adc.h"
 
 //------------------------------------------------------------------------------
 int str_to_int (char *str, int str_size)
@@ -85,16 +52,15 @@ int str_to_int (char *str, int str_size)
 int device_check (void *msg, char *resp)
 {
     struct msg_info *m_info = (struct msg_info *)msg;
-    int gid    = str_to_int (m_info->gid, SIZE_GID);
-    int dev_id = str_to_int (m_info->dev_id, SIZE_DEV_ID);
-    int action = action_to_enum (m_info->action);
+    int gid     = str_to_int (m_info->gid, SIZE_GID);
+    int dev_id  = str_to_int (m_info->dev_id, SIZE_DEV_ID);
+    char action = toupper    (m_info->action);
 
     switch(gid) {
-        case eGROUP_SYSTEM:
-            //int system_check (int id, char action, char *resp)
-            return system_check (dev_id, action, resp);
-        case eGROUP_ADC:
-//            return adc_check (dev_id, action, resp);
+        case eGROUP_SYSTEM:     return system_check (dev_id, action, resp);
+        case eGROUP_STORAGE:    return storage_check(dev_id, action, resp);
+        case eGROUP_USB:        return usb_check    (dev_id, action, resp);
+        case eGROUP_ADC:        return adc_check    (dev_id, action, resp);
         default :
             break;
     }
@@ -103,28 +69,13 @@ int device_check (void *msg, char *resp)
 }
 
 //------------------------------------------------------------------------------
-int device_setup (const char *cfg_file)
+int device_setup (void)
 {
-    FILE *fp;
-    char read_line[128];
-
-    if (access (cfg_file, R_OK) == 0) {
-        if ((fp = fopen (cfg_file, "r")) != NULL) {
-            while (1) {
-                memset (read_line, 0x00, sizeof(read_line));
-                if (fgets(read_line, sizeof(read_line), fp) == NULL)
-                    break;
-                if (read_line[0] != '#') {
-                    if (system_grp_init (read_line))    continue;
-//                    if (adc_grp_init (read_line))
-//                        continue;
-                }
-            }
-            fclose (fp);
-            return 1;
-        }
-    }
-    return 0;
+    system_grp_init ();
+    storage_grp_init ();
+    usb_grp_init ();
+    adc_grp_init ();
+    return 1;
 }
 
 //------------------------------------------------------------------------------

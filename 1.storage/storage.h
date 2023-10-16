@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 /**
- * @file system.h
+ * @file storage.h
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
  * @version 0.2
@@ -13,28 +13,34 @@
  */
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-#ifndef __SYSTEM_H__
-#define __SYSTEM_H__
+#ifndef __STORAGE_H__
+#define __STORAGE_H__
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-// Define the Device ID for the SYSTEM group.
+// Define the Device ID for the STORAGE group.
 //------------------------------------------------------------------------------
 enum {
-    eSYSTEM_MEM,
-    eSYSTEM_FB_X,
-    eSYSTEM_FB_Y,
-    eSYSTEM_END
+    // eMMC
+    eSTORAGE_0,
+    // uSD
+    eSTORAGE_1,
+    // SATA
+    eSTORAGE_2,
+    // NVME
+    eSTORAGE_3,
+
+    eSTORAGE_END
 };
 
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int system_check     (int id, char action, char *resp);
-extern int system_grp_init  (void);
+extern int storage_check     (int id, char action, char *resp);
+extern int storage_grp_init  (void);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-#endif  // #define __SYSTEM_H__
+#endif  // #define __STORAGE_H__
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

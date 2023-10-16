@@ -65,23 +65,9 @@ enum {
 };
 
 //------------------------------------------------------------------------------
-struct device_info {
-    // 초기화 확인
-    int     init;
-    int     id;
-    char    name [STR_NAME_LENGTH];
-    char    path [STR_PATH_LENGTH];
-    // 해당 Action에 따른 비교값 또는 최대값 저장, Action list(C, S, L, R, W, -, NUM)
-    int     value[eACTION_END];
-    int     min[eACTION_END];
-};
-
 //------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-extern int  action_to_enum  (char action);
-extern char enum_to_action  (int int_enum);
 extern int  device_check    (void *msg, char *resp);
-extern int  device_setup    (const char *cfg_file);
+extern int  device_setup    (void);
 
 //------------------------------------------------------------------------------
 #endif  // __LIB_DEV_TEST_H__

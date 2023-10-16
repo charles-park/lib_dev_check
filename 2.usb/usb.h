@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 /**
- * @file system.h
+ * @file usb.h
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
  * @version 0.2
@@ -13,28 +13,35 @@
  */
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-#ifndef __SYSTEM_H__
-#define __SYSTEM_H__
+#ifndef __USB_H__
+#define __USB_H__
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-// Define the Device ID for the SYSTEM group.
+// Define the Device ID for the USB group.
 //------------------------------------------------------------------------------
+// ODROID-M1S USB Port define
 enum {
-    eSYSTEM_MEM,
-    eSYSTEM_FB_X,
-    eSYSTEM_FB_Y,
-    eSYSTEM_END
+    // USB 3.0
+    eUSB_0,
+    // USB 2.0
+    eUSB_1,
+    // USB OTG
+    eUSB_2,
+    // Extra 14 Pin Header (USB2.0)
+    eUSB_3,
+
+    eUSB_END
 };
 
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int system_check     (int id, char action, char *resp);
-extern int system_grp_init  (void);
+extern int usb_check     (int id, char action, char *resp);
+extern int usb_grp_init  (void);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-#endif  // #define __SYSTEM_H__
+#endif  // #define __USB_H__
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

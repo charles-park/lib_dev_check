@@ -33,6 +33,7 @@
 //------------------------------------------------------------------------------
 #include "lib_dev_check.h"
 #include "0.system/system.h"
+#include "4.adc/adc.h"
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -60,6 +61,11 @@ const char id_system_str[eSYSTEM_END][STR_NAME_LENGTH] = {
     "FB_Y"
 };
 
+const char id_adc_str[eADC_END][STR_NAME_LENGTH] = {
+    "ADC_37",
+    "ADC_40",
+};
+
 //------------------------------------------------------------------------------
 struct cmd_list {
     // group id
@@ -73,7 +79,15 @@ struct cmd_list {
 struct cmd_list list[eGROUP_END] = {
 //  { eGROUP_ETHERNET, gid_str[eGROUP_ETHERNET], id_ethernet_str[0], eETHERNET_END },
     { eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
-//    { eGROUP_ADC     , gid_str[eGROUP_ADC]     , id_adc_str[0]     , eADC_END      },
+{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
+{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
+{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
+    { eGROUP_ADC     , gid_str[eGROUP_ADC]     , id_adc_str[0]     , eADC_END      },
+{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
+{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
+{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
+{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
+{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
 };
 
 //------------------------------------------------------------------------------
@@ -203,23 +217,16 @@ int main (int argc, char *argv[])
 
     {
         char msg[sizeof(struct msg_info)+1], resp[10];
+        int ret;
 
         memset (msg, 0, sizeof(msg));
         memset (resp, 0, sizeof(resp));
 
         make_msg (msg, OPT_GROUP_ID, OPT_DEVICE_ID, OPT_ACTION);
 
-#define DEVICE_CONFIG_FILE  "/root/lib2.0/lib_dev_test/dev_check.cfg"
-
-        if (!device_setup (DEVICE_CONFIG_FILE)) {
-            printf ("Device setup file not found = %s\n", DEVICE_CONFIG_FILE);
-            return 0;
-        }
-
-        if (device_check (msg, resp))
-            printf ("resp = %s\n", resp);
-        else
-            printf ("resp = %s\n", "return error");
+        device_setup();
+        ret = device_check (msg, resp);
+        printf ("resp = %s, return = %d\n", resp, ret);
     }
     return 0;
 }
