@@ -34,6 +34,7 @@
 
 //------------------------------------------------------------------------------
 #include "../lib_dev_check.h"
+#include "lib_gpio/lib_gpio.h"
 #include "header.h"
 
 //------------------------------------------------------------------------------
@@ -88,7 +89,7 @@ const int HEADER40[] = {
 
 #define PATTERN_COUNT   4
 
-const int PATTERN[PATTERN_COUNT][sizeof(HEADER40)] = {
+const int GPIO_PATTERN[PATTERN_COUNT][sizeof(HEADER40)] = {
     // Pattern 0 : ALL High
     {
         // Header J4 GPIOs
@@ -195,6 +196,16 @@ const int PATTERN[PATTERN_COUNT][sizeof(HEADER40)] = {
 //------------------------------------------------------------------------------
 static int pattern_write (int pattern)
 {
+    if (pattern < PATTERN_COUNT) {
+        int i;
+        for (i = 0; i < (int)(sizeof(HEADER40)/sizeof(int)); i++) {
+            if (HEADER40[i]) {
+                gpio_direction (HEADER40[i], GPIO_DIR_OUT);
+                gpio_set_value (HEADER40[i], GPIO_PATTERN[pattern][i]);
+            }
+        }
+        return 1;
+    }
     return 0;
 }
 
@@ -202,38 +213,49 @@ static int pattern_write (int pattern)
 //------------------------------------------------------------------------------
 int header_check (int id, char action, char *resp)
 {
-    int value = 0;
-
-    if (id >= eHEADER_END) {
-        sprintf (resp, "%06d", 0);
-        return 0;
-    }
+    int ret_value = 0, value = 0;
 
     if (id) {
-        // gpio control
-        printf ("gpio control %d\n", id);
+        switch (action) {
+            case 'S':   case 'C':
+                // gpio control
+                if (gpio_direction (id, GPIO_DIR_OUT)) {
+                    value = (action == 'S') ? 1 : 0;
+                    ret_value = gpio_set_value (id, value);
+                }
+                break;
+            case 'R':
+                if (gpio_direction (id, GPIO_DIR_IN))
+                    ret_value = gpio_get_value (id, &value);
+                break;
+            default :
+                ret_value = gpio_get_value (id, &value);
+                break;
+        }
+        printf ("gpio control %d ret = %d, value = %d\n", id, ret_value, value);
+
     } else {
         // header40 pattern test
-//        printf ("set pattern %d\n", atoi(action));
-        printf ("set pattern %d\n", action - '0');
+        value = action - '0';
+        ret_value = pattern_write (value);
+        printf ("set pattern %d, ret = %d\n", value, ret_value);
     }
 
     sprintf (resp, "%06d", value);
-    return 1;
+    return ret_value;
 }
 
 //------------------------------------------------------------------------------
 int header_grp_init (void)
 {
-#if 0
     int i;
 
-    for (i = 0; i < sizeof(HEADER14)/sizeof(int); i++)
+    for (i = 0; i < (int)(sizeof(HEADER14)/sizeof(int)); i++)
         gpio_export (HEADER14[i]);
 
-    for (i = 0; i < sizeof(HEADER40)/sizeof(int); i++)
+    for (i = 0; i < (int)(sizeof(HEADER40)/sizeof(int)); i++)
         gpio_export (HEADER40[i]);
-#endif
+
     return 1;
 }
 
