@@ -1,2 +1,2 @@
-# lib_dev_test
+# lib_dev_check
 Device test function for ODROID-JIG
