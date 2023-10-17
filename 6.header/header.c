@@ -87,9 +87,61 @@ const int HEADER40[] = {
      NC,  NC,   // | 39 : PWRBTN   || 40 : ADC.AIN0 |
 };
 
+//------------------------------------------------------------------------------
 #define PATTERN_COUNT   4
 
-const int GPIO_PATTERN[PATTERN_COUNT][sizeof(HEADER40)] = {
+const int H14_PATTERN[PATTERN_COUNT][sizeof(HEADER14)] = {
+    // Pattern 0 : ALL High
+    {
+        // Header J3 GPIOs
+        NC,     // Not used (pin 0)
+        NC, NC, // | 01 : DC_JACK  || 02 : 3.3V      |
+        NC, NC, // | 03 : USB D_P  || 04 : AUDIO_R   |
+        NC, NC, // | 05 : USB D_M  || 06 : AUDIO_GND |
+        NC, NC, // | 07 : GND      || 08 : AUDIO_L   |
+        NC, NC, // | 09 : PWRBTN   || 10 : RESET_H   |
+         1,  1, // | 11 : GPIO3_C4 || 12 : GPIO3_C5  |
+         1,  1, // | 13 : GPIO3_B3 || 14 : GPIO3_B4  |
+    },
+    // Pattern 1 : ALL Low
+    {
+        // Header J3 GPIOs
+        NC,     // Not used (pin 0)
+        NC, NC, // | 01 : DC_JACK  || 02 : 3.3V      |
+        NC, NC, // | 03 : USB D_P  || 04 : AUDIO_R   |
+        NC, NC, // | 05 : USB D_M  || 06 : AUDIO_GND |
+        NC, NC, // | 07 : GND      || 08 : AUDIO_L   |
+        NC, NC, // | 09 : PWRBTN   || 10 : RESET_H   |
+         0,  0, // | 11 : GPIO3_C4 || 12 : GPIO3_C5  |
+         0,  0, // | 13 : GPIO3_B3 || 14 : GPIO3_B4  |
+    },
+    // Pattern 2 : Cross 0
+    {
+        // Header J3 GPIOs
+        NC,     // Not used (pin 0)
+        NC, NC, // | 01 : DC_JACK  || 02 : 3.3V      |
+        NC, NC, // | 03 : USB D_P  || 04 : AUDIO_R   |
+        NC, NC, // | 05 : USB D_M  || 06 : AUDIO_GND |
+        NC, NC, // | 07 : GND      || 08 : AUDIO_L   |
+        NC, NC, // | 09 : PWRBTN   || 10 : RESET_H   |
+         0,  1, // | 11 : GPIO3_C4 || 12 : GPIO3_C5  |
+         1,  0, // | 13 : GPIO3_B3 || 14 : GPIO3_B4  |
+    },
+    // Pattern 3 : Cross 1
+    {
+        // Header J3 GPIOs
+        NC,     // Not used (pin 0)
+        NC, NC, // | 01 : DC_JACK  || 02 : 3.3V      |
+        NC, NC, // | 03 : USB D_P  || 04 : AUDIO_R   |
+        NC, NC, // | 05 : USB D_M  || 06 : AUDIO_GND |
+        NC, NC, // | 07 : GND      || 08 : AUDIO_L   |
+        NC, NC, // | 09 : PWRBTN   || 10 : RESET_H   |
+         1,  0, // | 11 : GPIO3_C4 || 12 : GPIO3_C5  |
+         0,  1, // | 13 : GPIO3_B3 || 14 : GPIO3_B4  |
+    },
+};
+
+const int H40_PATTERN[PATTERN_COUNT][sizeof(HEADER40)] = {
     // Pattern 0 : ALL High
     {
         // Header J4 GPIOs
@@ -198,10 +250,16 @@ static int pattern_write (int pattern)
 {
     if (pattern < PATTERN_COUNT) {
         int i;
+        for (i = 0; i < (int)(sizeof(HEADER14)/sizeof(int)); i++) {
+            if (HEADER14[i]) {
+                gpio_direction (HEADER14[i], GPIO_DIR_OUT);
+                gpio_set_value (HEADER14[i], H14_PATTERN[pattern][i]);
+            }
+        }
         for (i = 0; i < (int)(sizeof(HEADER40)/sizeof(int)); i++) {
             if (HEADER40[i]) {
                 gpio_direction (HEADER40[i], GPIO_DIR_OUT);
-                gpio_set_value (HEADER40[i], GPIO_PATTERN[pattern][i]);
+                gpio_set_value (HEADER40[i], H40_PATTERN[pattern][i]);
             }
         }
         return 1;
@@ -232,13 +290,10 @@ int header_check (int id, char action, char *resp)
                 ret_value = gpio_get_value (id, &value);
                 break;
         }
-        printf ("gpio control %d ret = %d, value = %d\n", id, ret_value, value);
-
     } else {
-        // header40 pattern test
+        // header14, header40 pattern test
         value = action - '0';
         ret_value = pattern_write (value);
-        printf ("set pattern %d, ret = %d\n", value, ret_value);
     }
 
     sprintf (resp, "%06d", value);
