@@ -32,8 +32,6 @@
 
 //------------------------------------------------------------------------------
 #include "lib_dev_check.h"
-#include "0.system/system.h"
-#include "4.adc/adc.h"
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -47,11 +45,10 @@ const char gid_str[eGROUP_END][STR_NAME_LENGTH] = {
     "HDMI",
     "ADC",
     "ETHERNET",
-    "HEADER",
+    "HEADER_GPIO",
     "AUDIO",
     "LED",
-    "FAN",
-    "GPIO",
+    "PWM",
 };
 
 //------------------------------------------------------------------------------
@@ -61,9 +58,43 @@ const char id_system_str[eSYSTEM_END][STR_NAME_LENGTH] = {
     "FB_Y"
 };
 
+const char id_storage_str[eSTORAGE_END][STR_NAME_LENGTH] = {
+    "eMMC",
+    "uSD",
+    "SATA",
+    "NVME",
+};
+
+const char id_usb_str[eUSB_END][STR_NAME_LENGTH] = {
+    "USB 3.0",
+    "USB 2.0",
+    "USB OTG",
+    "USB Header",
+};
+
+const char id_hdmi_str[eHDMI_END][STR_NAME_LENGTH] = {
+    "EDID",
+    "HPD",
+};
+
 const char id_adc_str[eADC_END][STR_NAME_LENGTH] = {
     "ADC_37",
     "ADC_40",
+};
+
+const char id_audio_str[eAUDIO_END][STR_NAME_LENGTH] = {
+    "AUDIO_LEFT",
+    "AUDIO_RIGHT",
+};
+
+const char id_led_str[eLED_END][STR_NAME_LENGTH] = {
+    "LED_POWER",
+    "LED_ALIVE",
+};
+
+const char id_pwm_str[ePWM_END][STR_NAME_LENGTH] = {
+    "PWM_0",
+    "PWM_1",
 };
 
 //------------------------------------------------------------------------------
@@ -79,15 +110,17 @@ struct cmd_list {
 struct cmd_list list[eGROUP_END] = {
 //  { eGROUP_ETHERNET, gid_str[eGROUP_ETHERNET], id_ethernet_str[0], eETHERNET_END },
     { eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
-{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
-{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
-{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
+    { eGROUP_STORAGE , gid_str[eGROUP_STORAGE] , id_storage_str[0] , eSTORAGE_END  },
+    { eGROUP_USB     , gid_str[eGROUP_USB]     , id_usb_str[0]     , eUSB_END      },
+    { eGROUP_HDMI    , gid_str[eGROUP_HDMI]    , id_hdmi_str[0]    , eHDMI_END     },
     { eGROUP_ADC     , gid_str[eGROUP_ADC]     , id_adc_str[0]     , eADC_END      },
+
 { eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
 { eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
-{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
-{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
-{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
+
+    { eGROUP_AUDIO   , gid_str[eGROUP_AUDIO]   , id_audio_str[0]   , eAUDIO_END    },
+    { eGROUP_LED     , gid_str[eGROUP_LED]     , id_led_str[0]     , eLED_END      },
+    { eGROUP_PWM     , gid_str[eGROUP_PWM]     , id_pwm_str[0]     , ePWM_END      },
 };
 
 //------------------------------------------------------------------------------
@@ -127,7 +160,7 @@ static void print_usage (const char *prog)
          "\n"
          "  -g --group id     Group ID(0~99)\n"
          "  -d --device id    Device ID(0~999)\n"
-         "  -a --action       Action(Clear/Set/Link/Read/Write/0~9)\n"
+         "  -a --action       Action(Clear/Set/Link/Read/Write/Init/0~9)\n"
          "\n"
          "  e.g) system memory read.\n"
          "       lib_dev_test -g 0 -d 0 -a r\n"
@@ -226,6 +259,8 @@ int main (int argc, char *argv[])
 
         device_setup();
         ret = device_check (msg, resp);
+        if (OPT_GROUP_ID == eGROUP_AUDIO)
+            sleep (3);
         printf ("resp = %s, return = %d\n", resp, ret);
     }
     return 0;

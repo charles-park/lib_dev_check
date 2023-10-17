@@ -23,13 +23,13 @@
 // ODROID-M1S USB Port define
 enum {
     // USB 3.0
-    eUSB_0,
+    eUSB_30,
     // USB 2.0
-    eUSB_1,
+    eUSB_20,
     // USB OTG
-    eUSB_2,
+    eUSB_OTG,
     // Extra 14 Pin Header (USB2.0)
-    eUSB_3,
+    eUSB_EXTRA,
 
     eUSB_END
 };

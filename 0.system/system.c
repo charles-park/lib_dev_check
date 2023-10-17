@@ -30,9 +30,9 @@
 #include <linux/fb.h>
 #include <getopt.h>
 #include <pthread.h>
-
 #include <sys/sysinfo.h>
 
+//------------------------------------------------------------------------------
 #include "../lib_dev_check.h"
 #include "system.h"
 
@@ -48,7 +48,7 @@ struct device_system {
 // Configuration
 //
 //------------------------------------------------------------------------------
-/* define adc devices */
+/* define system devices */
 //------------------------------------------------------------------------------
 // Client LCD res (vu5)
 #define LCD_RES_X   800
@@ -117,8 +117,10 @@ int system_check (int id, char action, char *resp)
 {
     int value = 0, ret = 0;
 
-    if (id >= eSYSTEM_END)
+    if ((id >= eSYSTEM_END) || (access (DeviceSYSTEM.fb_path, R_OK) != 0)) {
+        sprintf (resp, "%06d", 0);
         return 0;
+    }
 
     switch (id) {
         case eSYSTEM_MEM:
@@ -143,9 +145,11 @@ int system_check (int id, char action, char *resp)
 //------------------------------------------------------------------------------
 int system_grp_init (void)
 {
-    DeviceSYSTEM.mem   = get_memory_size ();
-    DeviceSYSTEM.res_x = get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_X);
-    DeviceSYSTEM.res_y = get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_Y);
+    DeviceSYSTEM.mem = get_memory_size ();
+    if (access (DeviceSYSTEM.fb_path, R_OK)) {
+        DeviceSYSTEM.res_x = get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_X);
+        DeviceSYSTEM.res_y = get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_Y);
+    }
     return 1;
 }
 

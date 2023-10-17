@@ -22,13 +22,13 @@
 //------------------------------------------------------------------------------
 enum {
     // eMMC
-    eSTORAGE_0,
+    eSTORAGE_eMMC,
     // uSD
-    eSTORAGE_1,
+    eSTORAGE_uSD,
     // SATA
-    eSTORAGE_2,
+    eSTORAGE_SATA,
     // NVME
-    eSTORAGE_3,
+    eSTORAGE_NVME,
 
     eSTORAGE_END
 };

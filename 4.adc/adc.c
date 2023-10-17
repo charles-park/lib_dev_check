@@ -54,9 +54,9 @@ struct device_adc {
 /* define adc devices */
 //------------------------------------------------------------------------------
 struct device_adc DeviceADC [eADC_END] = {
-    // eADC_0 (Header 37)
+    // eADC_H37 (Header 37)
     { "/sys/bus/iio/devices/iio:device0/in_voltage3_raw", 1400, 1300, 0 },
-    // eADC_1 (Header 40)
+    // eADC_H40 (Header 40)
     { "/sys/bus/iio/devices/iio:device0/in_voltage2_raw", 500, 400, 0 },
 };
 
@@ -66,9 +66,6 @@ static int adc_read (const char *path)
 {
     char rdata[16];
     FILE *fp;
-
-    if (access (path, R_OK) != 0)
-        return 0;
 
     memset (rdata, 0, sizeof (rdata));
     // adc raw value get
@@ -85,8 +82,10 @@ int adc_check (int id, char action, char *resp)
 {
     int value = 0;
 
-    if (id >= eADC_END)
+    if ((id >= eADC_END) || (access (DeviceADC[id].path, R_OK) != 0)) {
+        sprintf (resp, "%06d", 0);
         return 0;
+    }
 
     value = (action == 'I') ? DeviceADC[id].value : adc_read (DeviceADC[id].path);
 
@@ -103,8 +102,10 @@ int adc_grp_init (void)
 {
     int i;
 
-    for (i = 0; i < eADC_END; i++)
-        DeviceADC[i].value = adc_read (DeviceADC[i].path);
+    for (i = 0; i < eADC_END; i++) {
+        if ((access (DeviceADC[i].path, R_OK)) == 0)
+            DeviceADC[i].value = adc_read (DeviceADC[i].path);
+    }
 
     return 1;
 }

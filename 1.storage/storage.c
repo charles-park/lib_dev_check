@@ -54,7 +54,7 @@ struct device_storage {
 /* define storage devices */
 //------------------------------------------------------------------------------
 // Boot device define (uSD)
-#define BOOT_DEVICE     eSTORAGE_1
+#define BOOT_DEVICE     eSTORAGE_uSD
 #define TEMP_FILE       "/tmp/wdat"
 
 struct device_storage DeviceSTORAGE [eSTORAGE_END] = {

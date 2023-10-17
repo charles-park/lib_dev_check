@@ -16,6 +16,16 @@
 #define __LIB_DEV_TEST_H__
 
 //------------------------------------------------------------------------------
+#include "0.system/system.h"
+#include "1.storage/storage.h"
+#include "2.usb/usb.h"
+#include "3.hdmi/hdmi.h"
+#include "4.adc/adc.h"
+#include "7.audio/audio.h"
+#include "8.led/led.h"
+#include "9.pwm/pwm.h"
+
+//------------------------------------------------------------------------------
 #define STR_PATH_LENGTH     128
 #define STR_NAME_LENGTH     16
 
@@ -44,11 +54,10 @@ enum {
     eGROUP_HDMI,
     eGROUP_ADC,
     eGROUP_ETHERNET,
-    eGROUP_HEADER,
+    eGROUP_HEADER_GPIO,
     eGROUP_AUDIO,
     eGROUP_LED,
-    eGROUP_FAN,
-    eGROUP_GPIO,
+    eGROUP_PWM,
     eGROUP_END
 };
 
