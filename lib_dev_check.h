@@ -21,6 +21,8 @@
 #include "2.usb/usb.h"
 #include "3.hdmi/hdmi.h"
 #include "4.adc/adc.h"
+//#include "5.ethernet/ethernet.h"
+#include "6.header/header.h"
 #include "7.audio/audio.h"
 #include "8.led/led.h"
 #include "9.pwm/pwm.h"
@@ -54,7 +56,7 @@ enum {
     eGROUP_HDMI,
     eGROUP_ADC,
     eGROUP_ETHERNET,
-    eGROUP_HEADER_GPIO,
+    eGROUP_HEADER,
     eGROUP_AUDIO,
     eGROUP_LED,
     eGROUP_PWM,
@@ -68,6 +70,7 @@ enum {
     eACTION_L,
     eACTION_R,
     eACTION_W,
+    eACTION_I,
     eACTION_NONE,
     eACTION_NUM,
     eACTION_END

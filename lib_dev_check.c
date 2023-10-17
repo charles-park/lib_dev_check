@@ -52,15 +52,16 @@ int device_check (void *msg, char *resp)
     char action = toupper    (m_info->action);
 
     switch(gid) {
-        case eGROUP_SYSTEM:     return system_check (dev_id, action, resp);
-        case eGROUP_STORAGE:    return storage_check(dev_id, action, resp);
-        case eGROUP_USB:        return usb_check    (dev_id, action, resp);
-        case eGROUP_HDMI:       return hdmi_check   (dev_id, action, resp);
-        case eGROUP_ADC:        return adc_check    (dev_id, action, resp);
-
-        case eGROUP_AUDIO:      return audio_check  (dev_id, action, resp);
-        case eGROUP_LED:        return led_check    (dev_id, action, resp);
-        case eGROUP_PWM:        return pwm_check    (dev_id, action, resp);
+        case eGROUP_SYSTEM:     return system_check     (dev_id, action, resp);
+        case eGROUP_STORAGE:    return storage_check    (dev_id, action, resp);
+        case eGROUP_USB:        return usb_check        (dev_id, action, resp);
+        case eGROUP_HDMI:       return hdmi_check       (dev_id, action, resp);
+        case eGROUP_ADC:        return adc_check        (dev_id, action, resp);
+//        case eGROUP_ETHERNET:   return ethernet_check   (dev_id, action, resp);
+        case eGROUP_HEADER:     return header_check     (dev_id, action, resp);
+        case eGROUP_AUDIO:      return audio_check      (dev_id, action, resp);
+        case eGROUP_LED:        return led_check        (dev_id, action, resp);
+        case eGROUP_PWM:        return pwm_check        (dev_id, action, resp);
         default :
             break;
     }
@@ -76,8 +77,8 @@ int device_setup (void)
     usb_grp_init ();
     hdmi_grp_init ();
     adc_grp_init ();
-// ethernet
-// header
+// ethernet_grp_init ();
+    header_grp_init ();
     audio_grp_init ();
     led_grp_init ();
     pwm_grp_init ();
