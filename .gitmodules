@@ -1,3 +1,6 @@
 [submodule "6.header/lib_gpio"]
 	path = 6.header/lib_gpio
 	url = https://github.com/charles-park/lib_gpio
+[submodule "5.ethernet/lib_efuse"]
+	path = 5.ethernet/lib_efuse
+	url = https://github.com/charles-park/lib_efuse
