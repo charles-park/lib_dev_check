@@ -21,7 +21,7 @@
 #include "2.usb/usb.h"
 #include "3.hdmi/hdmi.h"
 #include "4.adc/adc.h"
-//#include "5.ethernet/ethernet.h"
+#include "5.ethernet/ethernet.h"
 #include "6.header/header.h"
 #include "7.audio/audio.h"
 #include "8.led/led.h"

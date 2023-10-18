@@ -82,6 +82,18 @@ const char id_adc_str[eADC_END][STR_NAME_LENGTH] = {
     "ADC_40",
 };
 
+const char id_ethernet_str[eETHERNET_END][STR_NAME_LENGTH] = {
+    "ETHERNET_IP",
+    "ETHERNET_MAC",
+    "ETHERNET_IPERF",
+    "ETHERNET_LINK",
+};
+
+const char id_header_str[eHEADER_END][STR_NAME_LENGTH] = {
+    "HEADER_H40_H14",
+    "HEADER_GPIO",
+};
+
 const char id_audio_str[eAUDIO_END][STR_NAME_LENGTH] = {
     "AUDIO_LEFT",
     "AUDIO_RIGHT",
@@ -108,16 +120,13 @@ struct cmd_list {
 };
 
 struct cmd_list list[eGROUP_END] = {
-//  { eGROUP_ETHERNET, gid_str[eGROUP_ETHERNET], id_ethernet_str[0], eETHERNET_END },
     { eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
     { eGROUP_STORAGE , gid_str[eGROUP_STORAGE] , id_storage_str[0] , eSTORAGE_END  },
     { eGROUP_USB     , gid_str[eGROUP_USB]     , id_usb_str[0]     , eUSB_END      },
     { eGROUP_HDMI    , gid_str[eGROUP_HDMI]    , id_hdmi_str[0]    , eHDMI_END     },
     { eGROUP_ADC     , gid_str[eGROUP_ADC]     , id_adc_str[0]     , eADC_END      },
-
-{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
-{ eGROUP_SYSTEM  , gid_str[eGROUP_SYSTEM]  , id_system_str[0]  , eSYSTEM_END   },
-
+    { eGROUP_ETHERNET, gid_str[eGROUP_ETHERNET], id_ethernet_str[0], eETHERNET_END },
+    { eGROUP_HEADER  , gid_str[eGROUP_HEADER]  , id_header_str[0]  , eHEADER_END   },
     { eGROUP_AUDIO   , gid_str[eGROUP_AUDIO]   , id_audio_str[0]   , eAUDIO_END    },
     { eGROUP_LED     , gid_str[eGROUP_LED]     , id_led_str[0]     , eLED_END      },
     { eGROUP_PWM     , gid_str[eGROUP_PWM]     , id_pwm_str[0]     , ePWM_END      },
