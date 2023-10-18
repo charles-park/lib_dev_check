@@ -47,16 +47,14 @@
 #include "ethernet.h"
 
 //------------------------------------------------------------------------------
-// Client에서 iperf3 서버 모드로 1번만 실행함.
-// Server 명령이 iperf3 -c {ip client} -t 1 -P 1 인 경우 strstr "receiver" 검색
-// Server 명령이 iperf3 -c {ip client} -t 1 -P 1 -R 인 경우 strstr "sender" 검색
-// 결과값 중 Mbits/sec or Gbits/sec를 찾아 속도를 구함.
+//
+// iperf3 client setup (고정된 server ip 필요)
+//
 //------------------------------------------------------------------------------
-const char *odroid_mac_prefix = "001E06";
-const char *iperf_run_cmd = "iperf3 -t 1 -c";
+#define SERVER_IP_ADDR  "192.168.20.45"     // default server ip (charles pc)
+#define IPERF3_RUN_CMD  "iperf3 -t 1 -c"
 
-// stdlib.h
-// strtoul (string, endp, base(10, 16,...))
+char Iperf3ServerIP [20] = {0, };
 
 //------------------------------------------------------------------------------
 //
@@ -111,16 +109,14 @@ static int get_eth0_ip (void)
 }
 
 //------------------------------------------------------------------------------
-#define SERVER_IP_ADDR  "192.168.20.45"     // test charles pc
-
 static int ethernet_iperf (const char *found_str)
 {
     FILE *fp;
-    char cmd_line[STR_PATH_LENGTH], retry = 10, *pstr;
+    char cmd_line[STR_PATH_LENGTH], *pstr;
     int value = 0;
 
     memset (cmd_line, 0x00, sizeof(cmd_line));
-    sprintf(cmd_line, "%s %s", iperf_run_cmd, SERVER_IP_ADDR);
+    sprintf(cmd_line, "%s %s", IPERF3_RUN_CMD, Iperf3ServerIP);
 
     if ((fp = popen(cmd_line, "r")) != NULL) {
         while (1) {
@@ -322,6 +318,27 @@ int ethernet_check (int id, char action, char *resp)
 }
 
 //------------------------------------------------------------------------------
+void set_server_ip (void)
+{
+    FILE *fp;
+    char cmd_line[STR_PATH_LENGTH];
+
+    memset (Iperf3ServerIP, 0, sizeof(Iperf3ServerIP));
+    if (access ("/boot/iperf_server_ip.txt", F_OK) == 0) {
+        memset (cmd_line, 0x00, sizeof(cmd_line));
+        if ((fp = fopen ("/boot/iperf_server_ip.txt", "r")) != NULL) {
+            memset (cmd_line, 0x00, sizeof(cmd_line));
+            if (NULL != fgets (cmd_line, sizeof(cmd_line), fp)) {
+                fclose (fp);
+                strncpy (Iperf3ServerIP, cmd_line, strlen(cmd_line));
+                return;
+            }
+        }
+    }
+    sprintf (Iperf3ServerIP, "%s", SERVER_IP_ADDR);
+}
+
+//------------------------------------------------------------------------------
 int ethernet_grp_init (void)
 {
     char efuse [EFUSE_SIZE_M1S];
@@ -341,6 +358,9 @@ int ethernet_grp_init (void)
 
     // link speed
     DeviceETHERNET.speed = ethernet_link_speed();
+
+    // find /boot/iperf_server_ip.txt for Iperf3
+    set_server_ip ();
     return 1;
 }
 
