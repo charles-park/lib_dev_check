@@ -47,11 +47,11 @@ int str_to_int (char *str, int str_size)
 int device_check (void *msg, char *resp)
 {
     struct msg_info *m_info = (struct msg_info *)msg;
-    int gid     = str_to_int (m_info->gid, SIZE_GID);
+    int grp_id  = str_to_int (m_info->grp_id, SIZE_GRP_ID);
     int dev_id  = str_to_int (m_info->dev_id, SIZE_DEV_ID);
     char action = toupper    (m_info->action);
 
-    switch(gid) {
+    switch(grp_id) {
         case eGROUP_SYSTEM:     return system_check     (dev_id, action, resp);
         case eGROUP_STORAGE:    return storage_check    (dev_id, action, resp);
         case eGROUP_USB:        return usb_check        (dev_id, action, resp);

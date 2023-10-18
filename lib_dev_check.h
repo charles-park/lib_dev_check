@@ -33,18 +33,19 @@
 
 //------------------------------------------------------------------------------
 #define SIZE_UI_ID      4
-#define SIZE_GID        2
+#define SIZE_GRP_ID     2
 #define SIZE_DEV_ID     3
-#define SIZE_R_DELAY    4
+#define SIZE_EXTRA      6
 
 struct msg_info {
     char    start;
     char    cmd;
-    char    ui_id[SIZE_UI_ID];
-    char    gid[SIZE_GID];
+    char    ui_id [SIZE_UI_ID];
+    char    grp_id[SIZE_GRP_ID];
     char    dev_id[SIZE_DEV_ID];
     char    action;
-    char    resp_delay[SIZE_R_DELAY];
+    // extra data (response delay or mac write)
+    char    extra [SIZE_EXTRA];
     char    end;
 }   __attribute__((packed));
 

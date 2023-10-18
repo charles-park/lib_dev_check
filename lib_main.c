@@ -230,12 +230,12 @@ static void parse_opts (int argc, char *argv[])
 // message discription
 //
 //------------------------------------------------------------------------------
-// start | cmd | ui id | gid | dev_id | action | r_delay | end (total 17 bytes)
-//   @   |  C  |  0000 |  00 |   000  |    0   |   0000  | #
+// start | cmd | ui id | grp_id | dev_id | action | extra dat | end (total 19 bytes)
+//   @   |  C  |  0000 |    00  |   000  |    0   |   000000  | #
 //------------------------------------------------------------------------------
-void make_msg (char *msg, int gid, int dev_id, char action)
+void make_msg (char *msg, int grp_id, int dev_id, char action)
 {
-    sprintf (msg, "@C%04d%02d%03d%c%04d#", 0, gid, dev_id, action, 0);
+    sprintf (msg, "@C%04d%02d%03d%c%06d#", 0, grp_id, dev_id, action, 0);
     printf ("make msg = %s, size = %ld\n", msg, sizeof(struct msg_info));
 }
 
@@ -261,7 +261,7 @@ int main (int argc, char *argv[])
         char msg[sizeof(struct msg_info)+1], resp[10];
         int ret;
 
-        memset (msg, 0, sizeof(msg));
+        memset ( msg, 0, sizeof(msg));
         memset (resp, 0, sizeof(resp));
 
         make_msg (msg, OPT_GROUP_ID, OPT_DEVICE_ID, OPT_ACTION);

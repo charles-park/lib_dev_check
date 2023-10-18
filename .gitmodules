@@ -4,3 +4,6 @@
 [submodule "5.ethernet/lib_efuse"]
 	path = 5.ethernet/lib_efuse
 	url = https://github.com/charles-park/lib_efuse
+[submodule "5.ethernet/lib_mac"]
+	path = 5.ethernet/lib_mac
+	url = https://github.com/charles-park/lib_mac
