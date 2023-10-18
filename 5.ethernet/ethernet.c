@@ -42,7 +42,7 @@
 
 //------------------------------------------------------------------------------
 #include "../lib_dev_check.h"
-#include "lib_efuse/lib_efuse.h"
+#include "lib_mac/lib_mac.h"
 #include "lib_efuse/lib_efuse.h"
 #include "ethernet.h"
 
@@ -53,7 +53,7 @@
 // 결과값 중 Mbits/sec or Gbits/sec를 찾아 속도를 구함.
 //------------------------------------------------------------------------------
 const char *odroid_mac_prefix = "001E06";
-const char *iperf_run_cmd = "iperf3 -s -1";
+const char *iperf_run_cmd = "iperf3 -t 1 -c";
 
 // stdlib.h
 // strtoul (string, endp, base(10, 16,...))
@@ -64,10 +64,13 @@ const char *iperf_run_cmd = "iperf3 -s -1";
 //
 //------------------------------------------------------------------------------
 struct device_ethernet {
-    // ip value ddd of aaa.bbb.ccc.ddd
+    // ethernet link speed
     int speed;
+    // ip value ddd of aaa.bbb.ccc.ddd
     int ip_lsb;
+    // mac data validate
     char mac_status;
+    // mac str (aabbccddeeff)
     char mac_addr[MAC_STR_SIZE];
 };
 
@@ -108,6 +111,79 @@ static int get_eth0_ip (void)
 }
 
 //------------------------------------------------------------------------------
+#define SERVER_IP_ADDR  "192.168.20.45"     // test charles pc
+
+static int ethernet_iperf (const char *found_str)
+{
+    FILE *fp;
+    char cmd_line[STR_PATH_LENGTH], retry = 10, *pstr;
+    int value = 0;
+
+    memset (cmd_line, 0x00, sizeof(cmd_line));
+    sprintf(cmd_line, "%s %s", iperf_run_cmd, SERVER_IP_ADDR);
+
+    if ((fp = popen(cmd_line, "r")) != NULL) {
+        while (1) {
+            memset (cmd_line, 0, sizeof (cmd_line));
+            if (fgets (cmd_line, sizeof (cmd_line), fp) == NULL)
+                break;
+
+            if (strstr (cmd_line, found_str) != NULL) {
+                if ((pstr = strstr (cmd_line, "MBytes")) != NULL) {
+                    while (*pstr != ' ')    pstr++;
+                    value = atoi (pstr);
+                }
+            }
+        }
+        pclose(fp);
+    }
+    return value;
+}
+
+//------------------------------------------------------------------------------
+static int ethernet_link_speed (void)
+{
+    FILE *fp;
+    char cmd_line[STR_PATH_LENGTH];
+
+    if (access ("/sys/class/net/eth0/speed", F_OK) != 0)
+        return 0;
+
+    memset (cmd_line, 0x00, sizeof(cmd_line));
+    if ((fp = fopen ("/sys/class/net/eth0/speed", "r")) != NULL) {
+        memset (cmd_line, 0x00, sizeof(cmd_line));
+        if (NULL != fgets (cmd_line, sizeof(cmd_line), fp)) {
+            fclose (fp);
+            return atoi (cmd_line);
+        }
+        fclose (fp);
+    }
+    return 0;
+}
+
+//------------------------------------------------------------------------------
+static int ethernet_link_setup (int speed)
+{
+    FILE *fp;
+    char cmd_line[STR_PATH_LENGTH], retry = 10;
+
+    memset (cmd_line, 0x00, sizeof(cmd_line));
+    sprintf(cmd_line,"ethtool -s eth0 speed %d duplex full", speed);
+    if ((fp = popen(cmd_line, "w")) != NULL)
+        pclose(fp);
+
+    // timeout 10 sec
+    while (retry--) {
+        if (ethernet_link_speed() == speed) {
+            return 1;
+        }
+        sleep (1);
+    }
+    return 0;
+}
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 static int ethernet_ip_check (char action, char *resp)
 {
     int value = 0;
@@ -130,46 +206,62 @@ static int ethernet_ip_check (char action, char *resp)
 //------------------------------------------------------------------------------
 static int ethernet_mac_check (char action, char *resp)
 {
-    int value = 0;
     char efuse [EFUSE_SIZE_M1S];
+
+    memset (efuse, 0, sizeof (efuse));
 
     /* R = eth mac read, I = init value, W = eth mac write */
     switch (action) {
-        case 'I':
+        case 'I':   case 'R':   case 'W':
+            if ((action == 'W') && !DeviceETHERNET.mac_status) {
+                if (mac_server_request (MAC_SERVER_FACTORY, REQ_TYPE_UUID, "m1s", efuse)) {
+                    if (efuse_control (efuse, EFUSE_WRITE)) {
+                        memset (efuse, 0, sizeof(efuse));
+                        if (efuse_control (efuse, EFUSE_READ)) {
+                            DeviceETHERNET.mac_status = efuse_valid_check (efuse);
+                            if (DeviceETHERNET.mac_status) {
+                                memset (DeviceETHERNET.mac_addr, 0, sizeof (MAC_STR_SIZE));
+                                efuse_get_mac (efuse, DeviceETHERNET.mac_addr);
+                            }
+                            else
+                                efuse_control (efuse, EFUSE_ERASE);
+                        }
+                    }
+                }
+            }
             if (DeviceETHERNET.mac_status) {
                 strncpy (resp, &DeviceETHERNET.mac_addr[6], 6);
-                value = DeviceETHERNET.mac_status;
+                return 1;
             }
-            break;
-        case 'R':
-            efuse_control (efuse, EFUSE_READ);
-            DeviceETHERNET.mac_status = efuse_valid_check (efuse);
-            if (DeviceETHERNET.mac_status) {
-                efuse_get_mac (efuse, DeviceETHERNET.mac_addr);
-                strncpy (resp, &DeviceETHERNET.mac_addr[6], 6);
-                value = DeviceETHERNET.mac_status;
-            }
-            break;
-        case 'W':
-            memset  ( DeviceETHERNET.mac_addr, 0, MAC_STR_SIZE);
-            strncpy ( DeviceETHERNET.mac_addr, odroid_mac_prefix, 6);
-//            strncpy (&DeviceETHERNET.mac_addr[6], extra, 6);
-            // extra data write
-//            if (efuse_control(e))
             break;
         default :
             break;
     }
-    if (!value) sprintf (resp, "%06d", 0);
-    return value;
+    sprintf (resp, "%06d", 0);
+    return 0;
 }
 
 //------------------------------------------------------------------------------
 static int ethernet_iperf_check (char action, char *resp)
 {
-    /* R = run iperf server (iperf -s -1), iperf read */
+    int value = 0;
+
+    if (ethernet_link_speed() != 1000)
+        ethernet_link_setup (1000);
+
+    /* R = sender speed, W = receiver speed, iperf read */
     switch (action) {
+        case 'W':
+            if ((value = ethernet_iperf ("sender"))) {
+                sprintf (resp, "%06d", value);
+                return 1;
+            }
+            break;
         case 'R':
+            if ((value = ethernet_iperf ("receiver"))) {
+                sprintf (resp, "%06d", value);
+                return 1;
+            }
             break;
         default :
             break;
@@ -181,20 +273,39 @@ static int ethernet_iperf_check (char action, char *resp)
 //------------------------------------------------------------------------------
 static int ethernet_link_check (char action, char *resp)
 {
+    int value = 0;
     /* S = eth 1G setting, C = eth 100M setting, I = init valuue, R = read link speed */
     switch (action) {
-        case 'I':
-        case 'R':
+        case 'I':   case 'R':
+            if (action == 'R')
+                DeviceETHERNET.speed = ethernet_link_speed ();
+
+            value = DeviceETHERNET.speed;
+            break;
         case 'S':
+            DeviceETHERNET.speed = ethernet_link_speed();
+            if (DeviceETHERNET.speed != 1000) {
+                if (ethernet_link_setup (1000))
+                    DeviceETHERNET.speed = 1000;
+            }
+            value = DeviceETHERNET.speed == 1000 ? 1 : 0;
+            break;
         case 'C':
+            DeviceETHERNET.speed = ethernet_link_speed();
+            if (DeviceETHERNET.speed != 100) {
+                if (ethernet_link_setup (100))
+                    DeviceETHERNET.speed = 100;
+            }
+            value = DeviceETHERNET.speed == 100 ? 1 : 0;
             break;
         default :
             break;
     }
-    sprintf (resp, "%06d", 0);
-    return 0;
+    sprintf (resp, "%06d", DeviceETHERNET.speed);
+    return value;
 }
 
+//------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 int ethernet_check (int id, char action, char *resp)
 {
@@ -222,12 +333,14 @@ int ethernet_grp_init (void)
     DeviceETHERNET.ip_lsb = get_eth0_ip ();
 
     // mac status & value
-    efuse_control (efuse, EFUSE_READ);
-    DeviceETHERNET.mac_status = efuse_valid_check (efuse);
-    if (DeviceETHERNET.mac_status)
-        efuse_get_mac (efuse, DeviceETHERNET.mac_addr);
+    if (efuse_control (efuse, EFUSE_READ)) {
+        DeviceETHERNET.mac_status = efuse_valid_check (efuse);
+        if (DeviceETHERNET.mac_status)
+            efuse_get_mac (efuse, DeviceETHERNET.mac_addr);
+    }
 
     // link speed
+    DeviceETHERNET.speed = ethernet_link_speed();
     return 1;
 }
 
