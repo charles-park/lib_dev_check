@@ -48,13 +48,20 @@
 
 //------------------------------------------------------------------------------
 //
-// iperf3 client setup (고정된 server ip 필요)
+// iperf3 client setup (고정된 server ip 필요), /boot/iperf_server_ip.txt
 //
 //------------------------------------------------------------------------------
-#define SERVER_IP_ADDR  "192.168.20.45"     // default server ip (charles pc)
-#define IPERF3_RUN_CMD  "iperf3 -t 1 -c"
+#define SERVER_IP_ADDR      "192.168.20.45" // default server ip (charles pc)
 
 char Iperf3ServerIP [20] = {0, };
+
+//------------------------------------------------------------------------------
+#define IPERF3_RUN_CMD      "iperf3 -t 1 -c"
+#define IPERF_SPEED_MIN     800
+
+//------------------------------------------------------------------------------
+#define LINK_SPEED_1G       1000
+#define LINK_SPEED_100M     100
 
 //------------------------------------------------------------------------------
 //
@@ -69,7 +76,9 @@ struct device_ethernet {
     // mac data validate
     char mac_status;
     // mac str (aabbccddeeff)
-    char mac_addr[MAC_STR_SIZE];
+    char mac_str[MAC_STR_SIZE];
+    // ip str (aaa.bbb.ccc.ddd)
+    char ip_str [sizeof(struct sockaddr)];
 };
 
 struct device_ethernet DeviceETHERNET;
@@ -98,6 +107,9 @@ static int get_eth0_ip (void)
     // board(iface) ip
     memset (if_info, 0, sizeof(if_info));
     inet_ntop (AF_INET, ifr.ifr_addr.sa_data+2, if_info, sizeof(struct sockaddr));
+
+    /* aaa.bbb.ccc.ddd 형태로 저장됨 (16 bytes) */
+    memcpy (DeviceETHERNET.ip_str, if_info, strlen(if_info));
 
     if ((p_str = strtok (if_info, ".")) != NULL) {
         strtok (NULL, "."); strtok (NULL, ".");
@@ -170,9 +182,8 @@ static int ethernet_link_setup (int speed)
 
     // timeout 10 sec
     while (retry--) {
-        if (ethernet_link_speed() == speed) {
+        if (ethernet_link_speed() == speed)
             return 1;
-        }
         sleep (1);
     }
     return 0;
@@ -216,8 +227,8 @@ static int ethernet_mac_check (char action, char *resp)
                         if (efuse_control (efuse, EFUSE_READ)) {
                             DeviceETHERNET.mac_status = efuse_valid_check (efuse);
                             if (DeviceETHERNET.mac_status) {
-                                memset (DeviceETHERNET.mac_addr, 0, sizeof (MAC_STR_SIZE));
-                                efuse_get_mac (efuse, DeviceETHERNET.mac_addr);
+                                memset (DeviceETHERNET.mac_str, 0, MAC_STR_SIZE);
+                                efuse_get_mac (efuse, DeviceETHERNET.mac_str);
                             }
                             else
                                 efuse_control (efuse, EFUSE_ERASE);
@@ -225,8 +236,9 @@ static int ethernet_mac_check (char action, char *resp)
                     }
                 }
             }
+            /* 001E06aabbcc 형태로 저장이며, 앞의 6바이트는 고정이므로 하위 6바이트만 전송함. */
             if (DeviceETHERNET.mac_status) {
-                strncpy (resp, &DeviceETHERNET.mac_addr[6], 6);
+                strncpy (resp, &DeviceETHERNET.mac_str[6], 6);
                 return 1;
             }
             break;
@@ -242,21 +254,21 @@ static int ethernet_iperf_check (char action, char *resp)
 {
     int value = 0;
 
-    if (ethernet_link_speed() != 1000)
-        ethernet_link_setup (1000);
+    if (ethernet_link_speed() != LINK_SPEED_1G)
+        ethernet_link_setup (LINK_SPEED_1G);
 
     /* R = sender speed, W = receiver speed, iperf read */
     switch (action) {
         case 'W':
             if ((value = ethernet_iperf ("sender"))) {
                 sprintf (resp, "%06d", value);
-                return 1;
+                return value > IPERF_SPEED_MIN ? 1 : 0;
             }
             break;
         case 'R':
             if ((value = ethernet_iperf ("receiver"))) {
                 sprintf (resp, "%06d", value);
-                return 1;
+                return value > IPERF_SPEED_MIN ? 1 : 0;
             }
             break;
         default :
@@ -276,23 +288,23 @@ static int ethernet_link_check (char action, char *resp)
             if (action == 'R')
                 DeviceETHERNET.speed = ethernet_link_speed ();
 
-            value = DeviceETHERNET.speed;
+            value = DeviceETHERNET.speed ? 1 : 0;
             break;
         case 'S':
             DeviceETHERNET.speed = ethernet_link_speed();
-            if (DeviceETHERNET.speed != 1000) {
-                if (ethernet_link_setup (1000))
-                    DeviceETHERNET.speed = 1000;
+            if (DeviceETHERNET.speed != LINK_SPEED_1G) {
+                DeviceETHERNET.speed  =
+                    ethernet_link_setup (LINK_SPEED_1G);
             }
-            value = DeviceETHERNET.speed == 1000 ? 1 : 0;
+            value = (DeviceETHERNET.speed == LINK_SPEED_1G) ? 1 : 0;
             break;
         case 'C':
             DeviceETHERNET.speed = ethernet_link_speed();
-            if (DeviceETHERNET.speed != 100) {
-                if (ethernet_link_setup (100))
-                    DeviceETHERNET.speed = 100;
+            if (DeviceETHERNET.speed != LINK_SPEED_100M) {
+                DeviceETHERNET.speed  =
+                    ethernet_link_setup (LINK_SPEED_100M);
             }
-            value = DeviceETHERNET.speed == 100 ? 1 : 0;
+            value = (DeviceETHERNET.speed == LINK_SPEED_100M) ? 1 : 0;
             break;
         default :
             break;
@@ -303,22 +315,7 @@ static int ethernet_link_check (char action, char *resp)
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-int ethernet_check (int id, char action, char *resp)
-{
-    switch (id) {
-        case eETHERNET_IP:      return ethernet_ip_check    (action, resp);
-        case eETHERNET_MAC:     return ethernet_mac_check   (action, resp);
-        case eETHERNET_IPERF:   return ethernet_iperf_check (action, resp);
-        case eETHERNET_LINK:    return ethernet_link_check  (action, resp);
-        default:
-            break;
-    }
-    sprintf (resp, "%06d", 0);
-    return 0;
-}
-
-//------------------------------------------------------------------------------
-void set_server_ip (void)
+static void set_server_ip (void)
 {
     FILE *fp;
     char cmd_line[STR_PATH_LENGTH];
@@ -339,6 +336,29 @@ void set_server_ip (void)
 }
 
 //------------------------------------------------------------------------------
+// ip_str은 16바이트 할당되어야 함.
+//------------------------------------------------------------------------------
+void ehternet_ip_str (char *ip_str)
+{
+    memcpy (ip_str, DeviceETHERNET.ip_str, strlen (DeviceETHERNET.ip_str));
+}
+
+//------------------------------------------------------------------------------
+int ethernet_check (int id, char action, char *resp)
+{
+    switch (id) {
+        case eETHERNET_IP:      return ethernet_ip_check    (action, resp);
+        case eETHERNET_MAC:     return ethernet_mac_check   (action, resp);
+        case eETHERNET_IPERF:   return ethernet_iperf_check (action, resp);
+        case eETHERNET_LINK:    return ethernet_link_check  (action, resp);
+        default:
+            break;
+    }
+    sprintf (resp, "%06d", 0);
+    return 0;
+}
+
+//------------------------------------------------------------------------------
 int ethernet_grp_init (void)
 {
     char efuse [EFUSE_SIZE_M1S];
@@ -346,20 +366,19 @@ int ethernet_grp_init (void)
     memset (efuse, 0, sizeof (efuse));
     memset (&DeviceETHERNET, 0, sizeof(DeviceETHERNET));
 
-    // get Board lsb ip address value
+    // get Board lsb ip address int value
     DeviceETHERNET.ip_lsb = get_eth0_ip ();
 
     // mac status & value
     if (efuse_control (efuse, EFUSE_READ)) {
         DeviceETHERNET.mac_status = efuse_valid_check (efuse);
         if (DeviceETHERNET.mac_status)
-            efuse_get_mac (efuse, DeviceETHERNET.mac_addr);
+            efuse_get_mac (efuse, DeviceETHERNET.mac_str);
     }
-
     // link speed
     DeviceETHERNET.speed = ethernet_link_speed();
 
-    // find /boot/iperf_server_ip.txt for Iperf3
+    // find /boot/iperf_server_ip.txt for Iperf3 server
     set_server_ip ();
     return 1;
 }

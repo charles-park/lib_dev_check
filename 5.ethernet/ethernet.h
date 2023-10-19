@@ -35,8 +35,10 @@ enum {
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int ethernet_check     (int id, char action, char *resp);
-extern int ethernet_grp_init  (void);
+extern void ehternet_ip_str     (char *ip_str);
+
+extern int  ethernet_check      (int id, char action, char *resp);
+extern int  ethernet_grp_init   (void);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
