@@ -58,11 +58,11 @@ struct device_usb {
 struct device_usb DeviceUSB [eUSB_END] = {
     // path, r_min(MB/s), w_min(MB/s), link, read
     // eUSB_30, USB 3.0
-    { "/sys/bus/usb/devices/6-1", 100, 35, 5000, 0 },
+    { "/sys/bus/usb/devices/8-1", 100, 35, 5000, 0 },
     // eUSB_20, USB 2.0
     { "/sys/bus/usb/devices/2-1",  25, 20,  480, 0 },
     // eUSB_OTG, USB OTG (Micro USB)
-    { "/sys/bus/usb/devices/7-1",  25, 20,  480, 0 },
+    { "/sys/bus/usb/devices/5-1",  25, 20,  480, 0 },
     // eUSB_EXTRA, Extra 14 Pin Header (USB2.0)
     { "/sys/bus/usb/devices/1-1",  25, 20,  480, 0 },
 };
