@@ -54,10 +54,10 @@ struct device_adc {
 /* define adc devices */
 //------------------------------------------------------------------------------
 struct device_adc DeviceADC [eADC_END] = {
-    // eADC_H37 (Header 37)
-    { "/sys/bus/iio/devices/iio:device0/in_voltage3_raw", 1400, 1300, 0 },
-    // eADC_H40 (Header 40)
-    { "/sys/bus/iio/devices/iio:device0/in_voltage2_raw", 500, 400, 0 },
+    // eADC_H37 (Header 37) - 1.365mV ~ 1.347mV (1.358mV) : 780 x 1.75mV
+    { "/sys/bus/iio/devices/iio:device0/in_voltage3_raw", 790, 770, 0 },
+    // eADC_H40 (Header 40) - 0.481mv ~ 0.463mV (0.441mV)
+    { "/sys/bus/iio/devices/iio:device0/in_voltage2_raw", 280, 260, 0 },
 };
 
 //------------------------------------------------------------------------------
