@@ -49,7 +49,10 @@ int device_check (void *msg, char *resp)
     struct msg_info *m_info = (struct msg_info *)msg;
     int grp_id  = str_to_int (m_info->grp_id, SIZE_GRP_ID);
     int dev_id  = str_to_int (m_info->dev_id, SIZE_DEV_ID);
+    // extra data or delay ms
+    int extra   = str_to_int (m_info->extra, SIZE_EXTRA);
     char action = toupper    (m_info->action);
+    int status  = 0;
 
     switch(grp_id) {
         case eGROUP_SYSTEM:     return system_check     (dev_id, action, resp);
@@ -58,15 +61,18 @@ int device_check (void *msg, char *resp)
         case eGROUP_HDMI:       return hdmi_check       (dev_id, action, resp);
         case eGROUP_ADC:        return adc_check        (dev_id, action, resp);
         case eGROUP_ETHERNET:   return ethernet_check   (dev_id, action, resp);
-        case eGROUP_HEADER:     return header_check     (dev_id, action, resp);
-        case eGROUP_AUDIO:      return audio_check      (dev_id, action, resp);
-        case eGROUP_LED:        return led_check        (dev_id, action, resp);
-        case eGROUP_PWM:        return pwm_check        (dev_id, action, resp);
-        default :
-            break;
+        // ADC board check (server)
+        case eGROUP_HEADER:     status = header_check(dev_id, action, resp); break;
+        case eGROUP_AUDIO:      status = audio_check (dev_id, action, resp); break;
+        case eGROUP_LED:        status = led_check   (dev_id, action, resp); break;
+        case eGROUP_PWM:        status = pwm_check   (dev_id, action, resp); break;
+        default :               sprintf (resp, "%06d", 0);  break;
     }
-    sprintf (resp, "%06d", 0);
-    return 0;
+    // ms delay
+    if (extra)
+        usleep (extra * 1000);
+
+    return status;
 }
 
 //------------------------------------------------------------------------------
