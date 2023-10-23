@@ -146,7 +146,7 @@ int system_check (int id, char action, char *resp)
 int system_grp_init (void)
 {
     DeviceSYSTEM.mem = get_memory_size ();
-    if (access (DeviceSYSTEM.fb_path, R_OK)) {
+    if (access (DeviceSYSTEM.fb_path, R_OK) == 0) {
         DeviceSYSTEM.res_x = get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_X);
         DeviceSYSTEM.res_y = get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_Y);
     }
