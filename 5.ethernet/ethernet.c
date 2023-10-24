@@ -73,6 +73,8 @@ struct device_ethernet {
     int speed;
     // ip value ddd of aaa.bbb.ccc.ddd
     int ip_lsb;
+    // iperf receiver speed
+    int iperf_rx_speed;
     // mac data validate
     char mac_status;
     // mac str (aabbccddeeff)
@@ -124,13 +126,14 @@ static int get_eth0_ip (void)
 static int ethernet_iperf (const char *found_str)
 {
     FILE *fp;
-    char cmd_line[STR_PATH_LENGTH], *pstr;
+    char cmd_line[STR_PATH_LENGTH], *pstr, retry = 3;
     int value = 0;
 
+SERVER_BUSY:
     memset (cmd_line, 0x00, sizeof(cmd_line));
     sprintf(cmd_line, "%s %s", IPERF3_RUN_CMD, Iperf3ServerIP);
 
-    if ((fp = popen(cmd_line, "r")) != NULL) {
+    if (((fp = popen(cmd_line, "r")) != NULL) && retry) {
         while (1) {
             memset (cmd_line, 0, sizeof (cmd_line));
             if (fgets (cmd_line, sizeof (cmd_line), fp) == NULL)
@@ -144,6 +147,11 @@ static int ethernet_iperf (const char *found_str)
             }
         }
         pclose(fp);
+    }
+    if (retry-- && !value) {
+        printf ("%s : busy. remain retry = %d, value = %d\n", __func__, retry, value);
+        sleep (1);
+        goto SERVER_BUSY;
     }
     return value;
 }
@@ -211,31 +219,36 @@ static int ethernet_ip_check (char action, char *resp)
 }
 
 //------------------------------------------------------------------------------
-static int ethernet_mac_check (char action, char *resp)
+static int ethernet_mac_write (const char *model)
 {
     char efuse [EFUSE_SIZE_M1S];
 
     memset (efuse, 0, sizeof (efuse));
 
+    if (mac_server_request (MAC_SERVER_FACTORY, REQ_TYPE_UUID, model, efuse)) {
+        if (efuse_control (efuse, EFUSE_WRITE)) {
+            memset (efuse, 0, sizeof(efuse));
+            if (efuse_control (efuse, EFUSE_READ)) {
+                if (efuse_valid_check (efuse)) {
+                    memset (DeviceETHERNET.mac_str, 0, MAC_STR_SIZE);
+                    efuse_get_mac (efuse, DeviceETHERNET.mac_str);
+                    return 1;
+                }
+            }
+        }
+    }
+    efuse_control (efuse, EFUSE_ERASE);
+    return 0;
+}
+//------------------------------------------------------------------------------
+static int ethernet_mac_check (char action, char *resp)
+{
     /* R = eth mac read, I = init value, W = eth mac write */
     switch (action) {
         case 'I':   case 'R':   case 'W':
-            if ((action == 'W') && !DeviceETHERNET.mac_status) {
-                if (mac_server_request (MAC_SERVER_FACTORY, REQ_TYPE_UUID, "m1s", efuse)) {
-                    if (efuse_control (efuse, EFUSE_WRITE)) {
-                        memset (efuse, 0, sizeof(efuse));
-                        if (efuse_control (efuse, EFUSE_READ)) {
-                            DeviceETHERNET.mac_status = efuse_valid_check (efuse);
-                            if (DeviceETHERNET.mac_status) {
-                                memset (DeviceETHERNET.mac_str, 0, MAC_STR_SIZE);
-                                efuse_get_mac (efuse, DeviceETHERNET.mac_str);
-                            }
-                            else
-                                efuse_control (efuse, EFUSE_ERASE);
-                        }
-                    }
-                }
-            }
+            if ((action == 'W') && !DeviceETHERNET.mac_status)
+                DeviceETHERNET.mac_status = ethernet_mac_write ("m1s");
+
             /* 001E06aabbcc 형태로 저장이며, 앞의 6바이트는 고정이므로 하위 6바이트만 전송함. */
             if (DeviceETHERNET.mac_status) {
                 strncpy (resp, &DeviceETHERNET.mac_str[6], 6);
@@ -259,6 +272,9 @@ static int ethernet_iperf_check (char action, char *resp)
 
     /* R = sender speed, W = receiver speed, iperf read */
     switch (action) {
+        case 'I':
+                sprintf (resp, "%06d", DeviceETHERNET.iperf_rx_speed);
+                return DeviceETHERNET.iperf_rx_speed > IPERF_SPEED_MIN ? 1 : 0;
         case 'W':
             if ((value = ethernet_iperf ("sender"))) {
                 sprintf (resp, "%06d", value);
@@ -366,20 +382,28 @@ int ethernet_grp_init (void)
     memset (efuse, 0, sizeof (efuse));
     memset (&DeviceETHERNET, 0, sizeof(DeviceETHERNET));
 
+    // find /boot/iperf_server_ip.txt for Iperf3 server
+    set_server_ip ();
+
     // get Board lsb ip address int value
     DeviceETHERNET.ip_lsb = get_eth0_ip ();
 
-    // mac status & value
-    if (efuse_control (efuse, EFUSE_READ)) {
-        DeviceETHERNET.mac_status = efuse_valid_check (efuse);
-        if (DeviceETHERNET.mac_status)
-            efuse_get_mac (efuse, DeviceETHERNET.mac_str);
-    }
-    // link speed
-    DeviceETHERNET.speed = ethernet_link_speed();
+    if (DeviceETHERNET.ip_lsb) {
+        // mac status & value
+        if (efuse_control (efuse, EFUSE_READ)) {
+            DeviceETHERNET.mac_status = efuse_valid_check (efuse);
+            if (!DeviceETHERNET.mac_status)
+                DeviceETHERNET.mac_status = ethernet_mac_write ("m1s");
 
-    // find /boot/iperf_server_ip.txt for Iperf3 server
-    set_server_ip ();
+            if (DeviceETHERNET.mac_status)
+                efuse_get_mac (efuse, DeviceETHERNET.mac_str);
+        }
+        // link speed
+        DeviceETHERNET.speed = ethernet_link_speed();
+
+        // iperf speed
+        DeviceETHERNET.iperf_rx_speed = ethernet_iperf ("receiver");
+    }
     return 1;
 }
 
