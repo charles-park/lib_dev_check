@@ -267,6 +267,10 @@ static int ethernet_iperf_check (char action, char *resp)
 {
     int value = 0;
 
+    /* ethernet not link */
+    if (!DeviceETHERNET.ip_lsb)
+        goto error;
+
     if (ethernet_link_speed() != LINK_SPEED_1G)
         ethernet_link_setup (LINK_SPEED_1G);
 
@@ -290,6 +294,7 @@ static int ethernet_iperf_check (char action, char *resp)
         default :
             break;
     }
+error:
     sprintf (resp, "%06d", 0);
     return 0;
 }
@@ -389,20 +394,20 @@ int ethernet_grp_init (void)
     DeviceETHERNET.ip_lsb = get_eth0_ip ();
 
     if (DeviceETHERNET.ip_lsb) {
-        // mac status & value
-        if (efuse_control (efuse, EFUSE_READ)) {
-            DeviceETHERNET.mac_status = efuse_valid_check (efuse);
-            if (!DeviceETHERNET.mac_status)
-                DeviceETHERNET.mac_status = ethernet_mac_write ("m1s");
-
-            if (DeviceETHERNET.mac_status)
-                efuse_get_mac (efuse, DeviceETHERNET.mac_str);
-        }
         // link speed
         DeviceETHERNET.speed = ethernet_link_speed();
 
         // iperf speed
         DeviceETHERNET.iperf_rx_speed = ethernet_iperf ("receiver");
+    }
+    // mac status & value
+    if (efuse_control (efuse, EFUSE_READ)) {
+        DeviceETHERNET.mac_status = efuse_valid_check (efuse);
+        if (!DeviceETHERNET.mac_status && DeviceETHERNET.ip_lsb)
+            DeviceETHERNET.mac_status = ethernet_mac_write ("m1s");
+
+        if (DeviceETHERNET.mac_status)
+            efuse_get_mac (efuse, DeviceETHERNET.mac_str);
     }
     return 1;
 }
