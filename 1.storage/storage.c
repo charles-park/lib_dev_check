@@ -39,12 +39,26 @@
 //------------------------------------------------------------------------------
 struct device_storage {
     // Control path
-    const char *path;
+    char path [STR_PATH_LENGTH +1];
     // compare value (read min, write min : MB/s)
-    const int r_min, w_min;
+    int r_min, w_min;
+
     // read value
     int value;
 };
+
+/* Device default r/w speed (MB/s) */
+#define DEFAULT_EMMC_R  140
+#define DEFAULT_EMMC_W  70
+
+#define DEFAULT_uSD_R   50
+#define DEFAULT_uSD_W   20
+
+#define DEFAULT_SATA_R  250
+#define DEFAULT_SATA_W  150
+
+#define DEFAULT_NVME_R  250
+#define DEFAULT_NVME_W  150
 
 //------------------------------------------------------------------------------
 //
@@ -60,13 +74,13 @@ struct device_storage {
 struct device_storage DeviceSTORAGE [eSTORAGE_END] = {
     // path, r_min(MB/s), w_min(MB/s), read
     // eSTORAGE_EMMC
-    { "/dev/mmcblk0", 140,  70,   0 },
-    // eSTORAGE_SD (boot device : /root)
-    { "/dev/mmcblk1",  50,  20,   0 },
+    { "/dev/mmcblk0", DEFAULT_EMMC_R, DEFAULT_EMMC_W,   0 },
+    // eSTORAGE_uSD (boot device : /root)
+    { "/dev/mmcblk1",  DEFAULT_uSD_R,  DEFAULT_uSD_R,   0 },
     // eSTORAGE_SATA
-    {           NULL,   0,   0,   0 },
+    {            " ", DEFAULT_SATA_R, DEFAULT_SATA_R,   0 },
     // eSTORAGE_NVME
-    { "/dev/nvme0n1", 250, 150,   0 },
+    { "/dev/nvme0n1", DEFAULT_NVME_R, DEFAULT_NVME_R,   0 },
 };
 
 // Storage Read / Write (16 Mbytes, 1 block count)
@@ -116,7 +130,7 @@ static int storage_rw (const char *path, const char *check_cmd)
 //------------------------------------------------------------------------------
 int storage_check (int id, char action, char *resp)
 {
-    int value = 0;
+    int value = 0, status = 0;
 
     if ((id >= eSTORAGE_END) || (access (DeviceSTORAGE[id].path, R_OK) != 0)) {
         sprintf (resp, "%06d", 0);
@@ -130,8 +144,7 @@ int storage_check (int id, char action, char *resp)
             else
                 value = storage_rw (DeviceSTORAGE[id].path, STORAGE_R_CHECK);
 
-            if (value < DeviceSTORAGE[id].r_min)
-                value = 0;
+            status = (value < DeviceSTORAGE[id].r_min) ? 0 : 1;
             break;
         case 'W':
             /* boot device의 경우 /dev/node를 바로 r/w할 수 없기 때문. */
@@ -143,8 +156,7 @@ int storage_check (int id, char action, char *resp)
             else
                 value = storage_rw (DeviceSTORAGE[id].path, STORAGE_W_CHECK);
 
-            if (value < DeviceSTORAGE[id].w_min)
-                value = 0;
+            status = (value < DeviceSTORAGE[id].w_min) ? 0 : 1;
             break;
         case 'L':
             break;
@@ -152,13 +164,93 @@ int storage_check (int id, char action, char *resp)
             break;
     }
     sprintf (resp, "%06d", value);
-    return value ? 1 : 0;
+    return status;
+}
+
+//------------------------------------------------------------------------------
+static void default_config_write (const char *fname)
+{
+    FILE *fp;
+    char value [STR_PATH_LENGTH *2 +1];
+
+    if ((fp = fopen(fname, "wt")) == NULL)
+        return;
+
+    // default value write
+    fputs   ("# info : dev_id, dev_node, rd_speed, wr_speed \n", fp);
+    memset  (value, 0, STR_PATH_LENGTH *2);
+    sprintf (value, "%d,%s,%d,%d,\n",
+        eSTORAGE_eMMC, DeviceSTORAGE[eSTORAGE_eMMC].path, DEFAULT_EMMC_R, DEFAULT_EMMC_W);
+    fputs   (value, fp);
+    memset  (value, 0, STR_PATH_LENGTH *2);
+    sprintf (value, "%d,%s,%d,%d,\n",
+        eSTORAGE_uSD,  DeviceSTORAGE[eSTORAGE_uSD].path, DEFAULT_uSD_R, DEFAULT_uSD_W);
+    fputs   (value, fp);
+    memset  (value, 0, STR_PATH_LENGTH *2);
+    sprintf (value, "%d,%s,%d,%d,\n",
+        eSTORAGE_SATA, DeviceSTORAGE[eSTORAGE_SATA].path, DEFAULT_SATA_R, DEFAULT_SATA_W);
+    fputs   (value, fp);
+    memset  (value, 0, STR_PATH_LENGTH *2);
+    sprintf (value, "%d,%s,%d,%d,\n",
+        eSTORAGE_NVME, DeviceSTORAGE[eSTORAGE_NVME].path, DEFAULT_NVME_R, DEFAULT_NVME_W);
+    fputs   (value, fp);
+
+    // file close
+    fclose  (fp);
+}
+
+//------------------------------------------------------------------------------
+static void default_config_read (void)
+{
+    FILE *fp;
+    char fname [STR_PATH_LENGTH +1], value [STR_PATH_LENGTH +1], *ptr;
+    int dev_id;
+
+    memset  (fname, 0, STR_PATH_LENGTH);
+    sprintf (fname, "%sjig-%s.cfg", CONFIG_FILE_PATH, "storage");
+
+    if (access (fname, R_OK) != 0) {
+        default_config_write (fname);
+        return;
+    }
+
+    if ((fp = fopen(fname, "r")) == NULL)
+        return;
+
+    while(1) {
+        memset (value , 0, STR_PATH_LENGTH);
+        if (fgets (value, sizeof (value), fp) == NULL)
+            break;
+
+        switch (value[0]) {
+            case '#':   case '\n':
+                break;
+            default :
+                // default value write
+                // fputs   ("# info : dev_id, dev_node, rd_speed, wr_speed \n", fp);
+                if ((ptr = strtok (value, ",")) != NULL) {
+                    dev_id = atoi (ptr);
+                    if ((ptr = strtok ( NULL, ",")) != NULL) {
+                        memset (DeviceSTORAGE[dev_id].path, 0, STR_PATH_LENGTH);
+                        strcpy (DeviceSTORAGE[dev_id].path, ptr);
+                    }
+                    if ((ptr = strtok ( NULL, ",")) != NULL)
+                       DeviceSTORAGE[dev_id].r_min = atoi (ptr);
+                    if ((ptr = strtok ( NULL, ",")) != NULL)
+                       DeviceSTORAGE[dev_id].w_min = atoi (ptr);
+                }
+                break;
+        }
+    }
+    fclose(fp);
 }
 
 //------------------------------------------------------------------------------
 int storage_grp_init (void)
 {
     int i;
+
+    default_config_read ();
 
     for (i = 0; i < eSTORAGE_END; i++) {
         if ((access (DeviceSTORAGE[i].path, R_OK)) == 0)

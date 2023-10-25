@@ -47,21 +47,11 @@
 #include "ethernet.h"
 
 //------------------------------------------------------------------------------
-//
-// iperf3 client setup (고정된 server ip 필요), /boot/iperf_server_ip.txt
-//
-//------------------------------------------------------------------------------
-#define SERVER_IP_ADDR      "192.168.20.45" // default server ip (charles pc)
-
-char Iperf3ServerIP [20] = {0, };
-
-//------------------------------------------------------------------------------
-#define IPERF3_RUN_CMD      "iperf3 -t 1 -c"
-#define IPERF_SPEED_MIN     800
-
 //------------------------------------------------------------------------------
 #define LINK_SPEED_1G       1000
 #define LINK_SPEED_100M     100
+
+#define IPERF3_RUN_CMD      "iperf3 -t 1 -c"
 
 //------------------------------------------------------------------------------
 //
@@ -69,6 +59,10 @@ char Iperf3ServerIP [20] = {0, };
 //
 //------------------------------------------------------------------------------
 struct device_ethernet {
+    // iperf check value
+    char iperf_server_ip[STR_PATH_LENGTH +1];
+    int iperf_speed;
+
     // ethernet link speed
     int speed;
     // ip value ddd of aaa.bbb.ccc.ddd
@@ -83,7 +77,17 @@ struct device_ethernet {
     char ip_str [sizeof(struct sockaddr)];
 };
 
-struct device_ethernet DeviceETHERNET;
+#define DEFAULT_IPERF_SPEED     800
+#define DEFAULT_IPERF_SERVER    "192.168.20.45"
+
+//------------------------------------------------------------------------------
+//
+// Configuration
+//
+//------------------------------------------------------------------------------
+struct device_ethernet DeviceETHERNET = {
+    DEFAULT_IPERF_SERVER, DEFAULT_IPERF_SPEED, 0, 0, 0, 0, "", ""
+};
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -126,12 +130,12 @@ static int get_eth0_ip (void)
 static int ethernet_iperf (const char *found_str)
 {
     FILE *fp;
-    char cmd_line[STR_PATH_LENGTH], *pstr, retry = 3;
+    char cmd_line[STR_PATH_LENGTH *2 +1], *pstr, retry = 3;
     int value = 0;
 
 SERVER_BUSY:
     memset (cmd_line, 0x00, sizeof(cmd_line));
-    sprintf(cmd_line, "%s %s", IPERF3_RUN_CMD, Iperf3ServerIP);
+    sprintf(cmd_line, "%s %s", IPERF3_RUN_CMD, DeviceETHERNET.iperf_server_ip);
 
     if (((fp = popen(cmd_line, "r")) != NULL) && retry) {
         while (1) {
@@ -265,7 +269,7 @@ static int ethernet_mac_check (char action, char *resp)
 //------------------------------------------------------------------------------
 static int ethernet_iperf_check (char action, char *resp)
 {
-    int value = 0;
+    int value = 0, status = 0;
 
     /* ethernet not link */
     if (!DeviceETHERNET.ip_lsb)
@@ -277,39 +281,32 @@ static int ethernet_iperf_check (char action, char *resp)
     /* R = sender speed, W = receiver speed, iperf read */
     switch (action) {
         case 'I':
-                sprintf (resp, "%06d", DeviceETHERNET.iperf_rx_speed);
-                return DeviceETHERNET.iperf_rx_speed > IPERF_SPEED_MIN ? 1 : 0;
-        case 'W':
-            if ((value = ethernet_iperf ("sender"))) {
-                sprintf (resp, "%06d", value);
-                return value > IPERF_SPEED_MIN ? 1 : 0;
-            }
+            value  = DeviceETHERNET.iperf_rx_speed;
+            status = (DeviceETHERNET.iperf_rx_speed < DeviceETHERNET.iperf_speed) ? 0 : 1;
             break;
-        case 'R':
-            if ((value = ethernet_iperf ("receiver"))) {
-                sprintf (resp, "%06d", value);
-                return value > IPERF_SPEED_MIN ? 1 : 0;
-            }
+        case 'R':   case 'W':
+            value  = (action == 'R') ? ethernet_iperf ("receiver") : ethernet_iperf ("sender");
+            status = (value < DeviceETHERNET.iperf_speed) ? 0 : 1;
             break;
         default :
             break;
     }
 error:
-    sprintf (resp, "%06d", 0);
-    return 0;
+    sprintf (resp, "%06d", value);
+    return status;
 }
 
 //------------------------------------------------------------------------------
 static int ethernet_link_check (char action, char *resp)
 {
-    int value = 0;
+    int status = 0;
     /* S = eth 1G setting, C = eth 100M setting, I = init valuue, R = read link speed */
     switch (action) {
         case 'I':   case 'R':
             if (action == 'R')
                 DeviceETHERNET.speed = ethernet_link_speed ();
 
-            value = DeviceETHERNET.speed ? 1 : 0;
+            status = DeviceETHERNET.speed ? 1 : 0;
             break;
         case 'S':
             DeviceETHERNET.speed = ethernet_link_speed();
@@ -317,7 +314,7 @@ static int ethernet_link_check (char action, char *resp)
                 DeviceETHERNET.speed  =
                     ethernet_link_setup (LINK_SPEED_1G);
             }
-            value = (DeviceETHERNET.speed == LINK_SPEED_1G) ? 1 : 0;
+            status = (DeviceETHERNET.speed == LINK_SPEED_1G) ? 1 : 0;
             break;
         case 'C':
             DeviceETHERNET.speed = ethernet_link_speed();
@@ -325,37 +322,16 @@ static int ethernet_link_check (char action, char *resp)
                 DeviceETHERNET.speed  =
                     ethernet_link_setup (LINK_SPEED_100M);
             }
-            value = (DeviceETHERNET.speed == LINK_SPEED_100M) ? 1 : 0;
+            status = (DeviceETHERNET.speed == LINK_SPEED_100M) ? 1 : 0;
             break;
         default :
             break;
     }
     sprintf (resp, "%06d", DeviceETHERNET.speed);
-    return value;
+    return status;
 }
 
 //------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-static void set_server_ip (void)
-{
-    FILE *fp;
-    char cmd_line[STR_PATH_LENGTH];
-
-    memset (Iperf3ServerIP, 0, sizeof(Iperf3ServerIP));
-    if (access ("/boot/iperf_server_ip.txt", F_OK) == 0) {
-        memset (cmd_line, 0x00, sizeof(cmd_line));
-        if ((fp = fopen ("/boot/iperf_server_ip.txt", "r")) != NULL) {
-            memset (cmd_line, 0x00, sizeof(cmd_line));
-            if (NULL != fgets (cmd_line, sizeof(cmd_line), fp)) {
-                fclose (fp);
-                strncpy (Iperf3ServerIP, cmd_line, strlen(cmd_line));
-                return;
-            }
-        }
-    }
-    sprintf (Iperf3ServerIP, "%s", SERVER_IP_ADDR);
-}
-
 //------------------------------------------------------------------------------
 // ip_str은 16바이트 할당되어야 함.
 //------------------------------------------------------------------------------
@@ -380,15 +356,70 @@ int ethernet_check (int id, char action, char *resp)
 }
 
 //------------------------------------------------------------------------------
+static void default_config_write (const char *fname)
+{
+    FILE *fp;
+    char value [STR_PATH_LENGTH *2 +1];
+
+    if ((fp = fopen(fname, "wt")) == NULL)
+        return;
+
+    // default value write
+    fputs   ("# info : iperf server ip, iperf speed \n", fp);
+    memset  (value, 0, sizeof(value));
+    sprintf (value, "%s,%d,\n", DeviceETHERNET.iperf_server_ip, DeviceETHERNET.iperf_speed);
+    fputs   (value, fp);
+    fclose  (fp);
+}
+
+//------------------------------------------------------------------------------
+static void default_config_read (void)
+{
+    FILE *fp;
+    char fname [STR_PATH_LENGTH +1], value [STR_PATH_LENGTH +1], *ptr;
+
+    memset  (fname, 0, STR_PATH_LENGTH);
+    sprintf (fname, "%sjig-%s.cfg", CONFIG_FILE_PATH, "ethernet");
+
+    if (access (fname, R_OK) != 0) {
+        default_config_write (fname);
+        return;
+    }
+
+    if ((fp = fopen(fname, "r")) == NULL)
+        return;
+
+    while(1) {
+        memset (value , 0, STR_PATH_LENGTH);
+        if (fgets (value, sizeof (value), fp) == NULL)
+            break;
+
+        switch (value[0]) {
+            case '#':   case '\n':
+                break;
+            default :
+                // default value write
+                // fputs   ("# info : iperf server ip, iperf speed \n", fp);
+                if ((ptr = strtok ( value, ",")) != NULL) {
+                    memset (DeviceETHERNET.iperf_server_ip, 0, STR_PATH_LENGTH);
+                    strcpy (DeviceETHERNET.iperf_server_ip, ptr);
+                }
+                if ((ptr = strtok ( NULL, ",")) != NULL)
+                    DeviceETHERNET.iperf_speed = atoi (ptr);
+                break;
+        }
+    }
+    fclose(fp);
+}
+
+//------------------------------------------------------------------------------
 int ethernet_grp_init (void)
 {
     char efuse [EFUSE_SIZE_M1S];
 
     memset (efuse, 0, sizeof (efuse));
-    memset (&DeviceETHERNET, 0, sizeof(DeviceETHERNET));
 
-    // find /boot/iperf_server_ip.txt for Iperf3 server
-    set_server_ip ();
+    default_config_read ();
 
     // get Board lsb ip address int value
     DeviceETHERNET.ip_lsb = get_eth0_ip ();

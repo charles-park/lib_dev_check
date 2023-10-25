@@ -39,8 +39,16 @@
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 struct device_system {
-    int mem, res_x, res_y;
-    const char *fb_path;
+    // device check value
+    int res_x;
+    int res_y;
+    char fb_path[STR_PATH_LENGTH+ 1];
+
+    // read data
+    int mem;
+    int r_res_x;
+    int r_res_y;
+
 };
 
 //------------------------------------------------------------------------------
@@ -51,11 +59,11 @@ struct device_system {
 /* define system devices */
 //------------------------------------------------------------------------------
 // Client LCD res (vu5)
-#define LCD_RES_X   800
-#define LCD_RES_Y   480
+#define DEFAULT_RES_X   800
+#define DEFAULT_RES_Y   480
 
 static struct device_system DeviceSYSTEM = {
-    0, 0, 0, "/sys/class/graphics/fb0/virtual_size"
+    DEFAULT_RES_X, DEFAULT_RES_Y, "/sys/class/graphics/fb0/virtual_size", 0, 0, 0
 };
 
 //------------------------------------------------------------------------------
@@ -103,13 +111,13 @@ static int get_fb_size (const char *path, int id)
             }
             fclose(fp);
         }
+        switch (id) {
+            case eSYSTEM_FB_X:  return x;
+            case eSYSTEM_FB_Y:  return y;
+            default :           return 0;
+        }
     }
-
-    switch (id) {
-        case eSYSTEM_FB_X:  return x;
-        case eSYSTEM_FB_Y:  return y;
-        default :           return 0;
-    }
+    return 0;
 }
 
 //------------------------------------------------------------------------------
@@ -117,23 +125,18 @@ int system_check (int id, char action, char *resp)
 {
     int value = 0, ret = 0;
 
-    if ((id >= eSYSTEM_END) || (access (DeviceSYSTEM.fb_path, R_OK) != 0)) {
-        sprintf (resp, "%06d", 0);
-        return 0;
-    }
-
     switch (id) {
         case eSYSTEM_MEM:
             value = (action == 'I') ? DeviceSYSTEM.mem : get_memory_size();
             ret = value ? 1 : 0;
             break;
         case eSYSTEM_FB_X:
-            value = (action == 'I') ? DeviceSYSTEM.res_x : get_fb_size (DeviceSYSTEM.fb_path, id);
-            ret = (value == LCD_RES_X) ? 1 : 0;
+            value = (action == 'I') ? DeviceSYSTEM.r_res_x : get_fb_size (DeviceSYSTEM.fb_path, id);
+            ret = (value == DeviceSYSTEM.res_x) ? 1 : 0;
             break;
         case eSYSTEM_FB_Y:
-            value = (action == 'I') ? DeviceSYSTEM.res_y : get_fb_size (DeviceSYSTEM.fb_path, id);
-            ret = (value == LCD_RES_Y) ? 1 : 0;
+            value = (action == 'I') ? DeviceSYSTEM.r_res_y : get_fb_size (DeviceSYSTEM.fb_path, id);
+            ret = (value == DeviceSYSTEM.res_y) ? 1 : 0;
             break;
         default :
             break;
@@ -143,12 +146,72 @@ int system_check (int id, char action, char *resp)
 }
 
 //------------------------------------------------------------------------------
+static void default_config_write (const char *fname)
+{
+    FILE *fp;
+    char value [STR_PATH_LENGTH *2 +1];
+
+    if ((fp = fopen(fname, "wt")) == NULL)
+        return;
+
+    // default value write
+    fputs   ("# info : res_x, res_y, fb_path \n", fp);
+    memset  (value, 0, STR_PATH_LENGTH *2);
+    sprintf (value, "%d,%d,%s,\n", DeviceSYSTEM.res_x, DeviceSYSTEM.res_y, DeviceSYSTEM.fb_path);
+    fputs   (value, fp);
+    fclose  (fp);
+}
+
+//------------------------------------------------------------------------------
+static void default_config_read (void)
+{
+    FILE *fp;
+    char fname [STR_PATH_LENGTH +1], value [STR_PATH_LENGTH +1], *ptr;
+
+    memset  (fname, 0, STR_PATH_LENGTH);
+    sprintf (fname, "%sjig-%s.cfg", CONFIG_FILE_PATH, "system");
+
+    if (access (fname, R_OK) != 0) {
+        default_config_write (fname);
+        return;
+    }
+
+    if ((fp = fopen(fname, "r")) == NULL)
+        return;
+
+    while(1) {
+        memset (value , 0, STR_PATH_LENGTH);
+        if (fgets (value, sizeof (value), fp) == NULL)
+            break;
+
+        switch (value[0]) {
+            case '#':   case '\n':
+                break;
+            default :
+                // res_x, res_y, fb_path
+                if ((ptr = strtok (value, ",")) != NULL)
+                    DeviceSYSTEM.res_x = atoi (ptr);
+                if ((ptr = strtok ( NULL, ",")) != NULL)
+                    DeviceSYSTEM.res_y = atoi (ptr);
+                if ((ptr = strtok ( NULL, ",")) != NULL) {
+                    memset (DeviceSYSTEM.fb_path, 0, STR_PATH_LENGTH);
+                    strcpy (DeviceSYSTEM.fb_path, ptr);
+                }
+                break;
+        }
+    }
+    fclose(fp);
+}
+
+//------------------------------------------------------------------------------
 int system_grp_init (void)
 {
+    default_config_read();
+
     DeviceSYSTEM.mem = get_memory_size ();
     if (access (DeviceSYSTEM.fb_path, R_OK) == 0) {
-        DeviceSYSTEM.res_x = get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_X);
-        DeviceSYSTEM.res_y = get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_Y);
+        DeviceSYSTEM.r_res_x = get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_X);
+        DeviceSYSTEM.r_res_y = get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_Y);
     }
     return 1;
 }
