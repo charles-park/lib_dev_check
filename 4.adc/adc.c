@@ -49,7 +49,7 @@ struct device_adc {
 
 // default adc range (mV). ADC res 1.7578125mV (1800mV / 1024 bits)
 // const 1.358V (ADC board : 772) - (m1s = 787)
-#define DEFAULT_ADC_H37_H   790     // 790 * 1.75 = 1382.5mV
+#define DEFAULT_ADC_H37_H   800     // 800 * 1.75 = 1400.0mV
 #define DEFAULT_ADC_H37_L   770     // 770 * 1.75 = 1347.5mV
 
 // const 0.441V (ADC board : 250) - (m1s = 270)

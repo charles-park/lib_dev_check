@@ -209,7 +209,7 @@ static int ethernet_ip_check (char action, char *resp)
 
     /* R = ip read, I = init value */
     switch (action) {
-        case 'R':
+        case 'R':   case 'W':
             value = get_eth0_ip ();
             break;
         case 'I':
@@ -285,7 +285,8 @@ static int ethernet_iperf_check (char action, char *resp)
             status = (DeviceETHERNET.iperf_rx_speed < DeviceETHERNET.iperf_speed) ? 0 : 1;
             break;
         case 'R':   case 'W':
-            value  = (action == 'R') ? ethernet_iperf ("receiver") : ethernet_iperf ("sender");
+            if (get_eth0_ip ())
+                value  = (action == 'R') ? ethernet_iperf ("receiver") : ethernet_iperf ("sender");
             status = (value < DeviceETHERNET.iperf_speed) ? 0 : 1;
             break;
         default :
