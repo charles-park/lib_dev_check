@@ -80,8 +80,8 @@ static int get_memory_size (void)
 
             switch (mem_size) {
                 case    4097 ... 8192:  mem_size = 8192;    break;
-                case    2049 ... 4096:  mem_size = 8192;    break;
-                case    1025 ... 2048:  mem_size = 8192;    break;
+                case    2049 ... 4096:  mem_size = 4096;    break;
+                case    1025 ... 2048:  mem_size = 2048;    break;
                 default :
                     break;
             }
