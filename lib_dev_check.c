@@ -55,17 +55,17 @@ int device_check (void *msg, char *resp)
     int status  = 0;
 
     switch(grp_id) {
-        case eGROUP_SYSTEM:     return system_check     (dev_id, action, resp);
-        case eGROUP_STORAGE:    return storage_check    (dev_id, action, resp);
-        case eGROUP_USB:        return usb_check        (dev_id, action, resp);
-        case eGROUP_HDMI:       return hdmi_check       (dev_id, action, resp);
-        case eGROUP_ADC:        return adc_check        (dev_id, action, resp);
-        case eGROUP_ETHERNET:   return ethernet_check   (dev_id, action, resp);
+        case eGROUP_SYSTEM:     status = system_check   (dev_id, action, resp); break;
+        case eGROUP_STORAGE:    status = storage_check  (dev_id, action, resp); break;
+        case eGROUP_USB:        status = usb_check      (dev_id, action, resp); break;
+        case eGROUP_HDMI:       status = hdmi_check     (dev_id, action, resp); break;
+        case eGROUP_ADC:        status = adc_check      (dev_id, action, resp); break;
+        case eGROUP_ETHERNET:   status = ethernet_check (dev_id, action, resp); break;
         // ADC board check (server)
-        case eGROUP_HEADER:     status = header_check(dev_id, action, resp); break;
-        case eGROUP_AUDIO:      status = audio_check (dev_id, action, resp); break;
-        case eGROUP_LED:        status = led_check   (dev_id, action, resp); break;
-        case eGROUP_PWM:        status = pwm_check   (dev_id, action, resp); break;
+        case eGROUP_HEADER:     status = header_check   (dev_id, action, resp); break;
+        case eGROUP_AUDIO:      status = audio_check    (dev_id, action, resp); break;
+        case eGROUP_LED:        status = led_check      (dev_id, action, resp); break;
+        case eGROUP_PWM:        status = pwm_check      (dev_id, action, resp); break;
         default :               sprintf (resp, "%06d", 0);  break;
     }
     // ms delay

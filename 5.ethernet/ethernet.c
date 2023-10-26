@@ -104,7 +104,11 @@ static int get_eth0_ip (void)
         printf ("%s : Cannot get control socket\n", __func__);
         return 0;
     }
-    strncpy(ifr.ifr_name, "eth0", IFNAMSIZ);
+
+    /*AF_INET - to define IPv4 Address type.*/
+    ifr.ifr_addr.sa_family = AF_INET;
+
+    strncpy(ifr.ifr_name, "eth0", IFNAMSIZ -1);
     if (ioctl (fd, SIOCGIFADDR, &ifr) < 0) {
         printf ("iface name = eth0, SIOCGIFADDR ioctl Error!!\n");
         close (fd);
