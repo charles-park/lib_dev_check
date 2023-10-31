@@ -439,8 +439,15 @@ int ethernet_grp_init (void)
     // mac status & value
     if (efuse_control (efuse, EFUSE_READ)) {
         DeviceETHERNET.mac_status = efuse_valid_check (efuse);
-        if (!DeviceETHERNET.mac_status && DeviceETHERNET.ip_lsb)
-            DeviceETHERNET.mac_status = ethernet_mac_write ("m1s");
+        if (!DeviceETHERNET.mac_status && DeviceETHERNET.ip_lsb) {
+            if (ethernet_mac_write ("m1s")) {
+                memset (efuse, 0, sizeof (efuse));
+                efuse_control (efuse, EFUSE_READ);
+                DeviceETHERNET.mac_status = efuse_valid_check (efuse);
+            }
+            else
+                printf ("%s : ethernet mac write error! (m1s)\n", __func__);
+        }
 
         if (DeviceETHERNET.mac_status)
             efuse_get_mac (efuse, DeviceETHERNET.mac_str);
