@@ -121,7 +121,7 @@ int hdmi_check (int id, char action, char *resp)
     char rdata[HDMI_READ_BYTES];
 
     if ((id >= eHDMI_END) || (access (DeviceHDMI[id].path, R_OK) != 0)) {
-        sprintf (resp, "%06d", 0);
+        sprintf (resp, "%6s", "FAIL");
         return 0;
     }
 
@@ -138,7 +138,7 @@ int hdmi_check (int id, char action, char *resp)
         default :
             break;
     }
-    sprintf (resp, "%06d", value);
+    sprintf (resp, "%6s", value ? "PASS":"FAIL");
     return value;
 }
 
