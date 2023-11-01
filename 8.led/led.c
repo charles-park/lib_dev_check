@@ -125,9 +125,15 @@ int led_check (int id, char action, char *resp)
 //------------------------------------------------------------------------------
 int led_grp_init (void)
 {
+    int id;
     // Alive LED Trigger setting
     if (access (DeviceLED[eLED_ALIVE].path, R_OK) == 0)
         led_write (ALIVE_TRIGGER, "none");
+
+    // Default LED status OFF
+    for (id = 0; id < eLED_END; id++)
+        led_write (DeviceLED[id].path, DeviceLED[id].clr);
+
     return 1;
 }
 
