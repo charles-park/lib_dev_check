@@ -48,13 +48,14 @@ struct device_adc {
 };
 
 // default adc range (mV). ADC res 1.7578125mV (1800mV / 1024 bits)
-// const 1.358V (ADC board : 772) - (m1s = 787)
-#define DEFAULT_ADC_H37_H   800     // 800 * 1.75 = 1400.0mV
-#define DEFAULT_ADC_H37_L   770     // 770 * 1.75 = 1347.5mV
+// adc voltage = adc raw read * ADC res (1.75)
+// const 1.358V
+#define DEFAULT_ADC_H37_H   1400
+#define DEFAULT_ADC_H37_L   1340
 
-// const 0.441V (ADC board : 250) - (m1s = 270)
-#define DEFAULT_ADC_H40_H   280     // 280 * 1.75 = 490.0mV
-#define DEFAULT_ADC_H40_L   250     // 250 * 1.75 = 437.5mV
+// const 0.441V
+#define DEFAULT_ADC_H40_H   490
+#define DEFAULT_ADC_H40_L   430
 
 //------------------------------------------------------------------------------
 //
@@ -64,9 +65,9 @@ struct device_adc {
 /* define adc devices */
 //------------------------------------------------------------------------------
 struct device_adc DeviceADC [eADC_END] = {
-    // eADC_H37 (Header 37) - 1.365mV ~ 1.347mV (1.358mV) : 780 x 1.75mV
+    // eADC_H37 (Header 37) - const 1.358V
     { "/sys/bus/iio/devices/iio:device0/in_voltage3_raw", DEFAULT_ADC_H37_H, DEFAULT_ADC_H37_L, 0 },
-    // eADC_H40 (Header 40) - 0.481mv ~ 0.463mV (0.441mV)
+    // eADC_H40 (Header 40) - const 0.441V
     { "/sys/bus/iio/devices/iio:device0/in_voltage2_raw", DEFAULT_ADC_H40_H, DEFAULT_ADC_H40_L, 0 },
 };
 
@@ -75,6 +76,7 @@ struct device_adc DeviceADC [eADC_END] = {
 static int adc_read (const char *path)
 {
     char rdata[16];
+    int mV = 0;
     FILE *fp;
 
     memset (rdata, 0, sizeof (rdata));
@@ -84,7 +86,8 @@ static int adc_read (const char *path)
         fclose(fp);
     }
 
-    return atoi(rdata);
+    mV = (atoi (rdata) * 175) / 100;
+    return mV;
 }
 
 //------------------------------------------------------------------------------
