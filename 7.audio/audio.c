@@ -148,6 +148,10 @@ int audio_check (int id, char action, char *resp)
     }
 
     switch (action) {
+        case 'C':   /* wait audio stop */
+            while (AudioEnable && retry--)  sleep (1);
+            value = retry ? 1 : 0;
+            break;
         case 'W':
             while (AudioEnable && retry--)  sleep (1);
 
