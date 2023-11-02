@@ -131,10 +131,13 @@ static int get_eth0_ip (void)
 }
 
 //------------------------------------------------------------------------------
+// 10 sec wait & retry
+#define IPERF3_RETRY_COUNT   10
+
 static int ethernet_iperf (const char *found_str)
 {
     FILE *fp;
-    char cmd_line[STR_PATH_LENGTH *2 +1], *pstr, retry = 3;
+    char cmd_line[STR_PATH_LENGTH *2 +1], *pstr, retry = IPERF3_RETRY_COUNT;
     int value = 0;
 
 SERVER_BUSY:
