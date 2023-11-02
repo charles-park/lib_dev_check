@@ -54,11 +54,13 @@ struct device_audio {
 //------------------------------------------------------------------------------
 /* define audio devices */
 //------------------------------------------------------------------------------
+#define PLAY_TIME_SEC   2
+
 struct device_audio DeviceAUDIO [eAUDIO_END] = {
     // AUDIO LEFT
-    { 0, "1khz_left.wav" , 2, { 0, } },
+    { 0, "1khz_left.wav" , PLAY_TIME_SEC, { 0, } },
     // AUDIO RIGHT
-    { 0, "1khz_right.wav", 2, { 0, } },
+    { 0, "1khz_right.wav", PLAY_TIME_SEC, { 0, } },
 };
 
 //------------------------------------------------------------------------------
@@ -138,7 +140,7 @@ void *audio_thread_func (void *arg)
 //------------------------------------------------------------------------------
 int audio_check (int id, char action, char *resp)
 {
-    int value = 0;
+    int value = 0, retry = PLAY_TIME_SEC + 1;;
 
     if ((id >= eAUDIO_END) || (DeviceAUDIO[id].is_file != 1)) {
         sprintf (resp, "%06d", 0);
@@ -147,14 +149,19 @@ int audio_check (int id, char action, char *resp)
 
     switch (action) {
         case 'W':
-            pthread_mutex_lock   (&audio_mutex);
-            if (!AudioEnable) {
+            while (AudioEnable && retry--)  sleep (1);
+
+            if (retry) {
+                pthread_mutex_lock   (&audio_mutex);
                 AudioFileName = DeviceAUDIO[id].path;
                 AudioPlayTime = DeviceAUDIO[id].play_time;
                 AudioEnable = 1;
                 value = DeviceAUDIO[id].is_file;
+                pthread_mutex_unlock (&audio_mutex);
             }
-            pthread_mutex_unlock (&audio_mutex);
+            else
+                printf ("audio busy\n");
+
             break;
         default :
             break;
