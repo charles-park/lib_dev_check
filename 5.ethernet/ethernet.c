@@ -51,7 +51,8 @@
 #define LINK_SPEED_1G       1000
 #define LINK_SPEED_100M     100
 
-#define IPERF3_RUN_CMD      "iperf3 -t 1 -c"
+//#define IPERF3_RUN_CMD      "iperf3 -t 1 -c"
+#define IPERF3_RUN_CMD      "iperf3 -t 1 -R -c"
 
 //------------------------------------------------------------------------------
 //
