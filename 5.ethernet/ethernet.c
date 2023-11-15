@@ -79,9 +79,9 @@ struct device_ethernet {
     // mac data validate
     char mac_status;
     // mac str (aabbccddeeff)
-    char mac_str[MAC_STR_SIZE];
+    char mac_str[MAC_STR_SIZE +1];
     // ip str (aaa.bbb.ccc.ddd)
-    char ip_str [sizeof(struct sockaddr)];
+    char ip_str [sizeof(struct sockaddr)+1];
 };
 
 #define DEFAULT_IPERF_SPEED     800
@@ -350,9 +350,23 @@ static int ethernet_link_check (char action, char *resp)
 //------------------------------------------------------------------------------
 // ip_str은 16바이트 할당되어야 함.
 //------------------------------------------------------------------------------
-void ehternet_ip_str (char *ip_str)
+void ethernet_ip_str (char *ip_str)
 {
-    memcpy (ip_str, DeviceETHERNET.ip_str, strlen (DeviceETHERNET.ip_str));
+    if (DeviceETHERNET.ip_lsb)
+        memcpy (ip_str, DeviceETHERNET.ip_str, strlen (DeviceETHERNET.ip_str));
+    else
+        sprintf (ip_str, "%03d.%03d.%03d.%03d", 0, 0, 0, 0);
+}
+
+//------------------------------------------------------------------------------
+// mac_str은 20바이트 할당되어야 함.
+//------------------------------------------------------------------------------
+void ethernet_mac_str (char *mac_str)
+{
+    if (DeviceETHERNET.mac_status)
+        memcpy (mac_str, DeviceETHERNET.mac_str, strlen (DeviceETHERNET.mac_str));
+    else
+        sprintf (mac_str, "%012d", 0);
 }
 
 //------------------------------------------------------------------------------
