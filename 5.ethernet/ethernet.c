@@ -51,11 +51,14 @@
 #define LINK_SPEED_1G       1000
 #define LINK_SPEED_100M     100
 
-//#define IPERF3_RUN_CMD      "iperf3 -t 1 -c"
-//#define IPERF3_RUN_CMD      "iperf3 -t 1 -R -c"
 /* iperf3_odroid 를 설치하여 사용함. socket통신을 통하여 iperf3 실행하도록 함. */
 /* iperf3_odroid build 후 iperf3_odroid실행파일은 /usr/bin으로 복사하여 사용함. */
-#define IPERF3_RUN_CMD      "iperf3_odroid -R -p 8000 -c"
+#if defined (__IPERF3_ODROID__)
+    #define IPERF3_RUN_CMD      "iperf3_odroid -R -p 8000 -c"
+#else
+    // #define IPERF3_RUN_CMD      "iperf3 -t 1 -c"
+    #define IPERF3_RUN_CMD      "iperf3 -t 1 -R -c"
+#endif
 
 //------------------------------------------------------------------------------
 //
