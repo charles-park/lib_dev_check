@@ -3,8 +3,8 @@
  * @file usb.h
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-20
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -22,22 +22,19 @@
 //------------------------------------------------------------------------------
 // ODROID-M1S USB Port define
 enum {
-    // USB 3.0
-    eUSB_30,
-    // USB 2.0
-    eUSB_20,
-    // USB OTG
-    eUSB_OTG,
-    // Extra 14 Pin Header (USB2.0)
-    eUSB_EXTRA,
-
+    eUSB_0,
+    eUSB_1,
+    eUSB_2,
+    eUSB_3,
+    eUSB_4,
+    eUSB_5,
     eUSB_END
 };
 
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int usb_check     (int id, char action, char *resp);
+extern int usb_check     (int dev_id, char *resp);
 extern int usb_grp_init  (void);
 
 //------------------------------------------------------------------------------

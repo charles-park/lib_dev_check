@@ -53,7 +53,7 @@ struct device_pwm {
 //------------------------------------------------------------------------------
 /* define pwm devices (ODROID-N2L) */
 //------------------------------------------------------------------------------
-struct device_pwm DevicePWM [eLED_END] = {
+struct device_pwm DevicePWM [ePWM_END] = {
     // PWM0
     { "/sys/devices/platform/pwm-fan/hwmon/hwmon0/pwm0_enable", "1", "0" },
     // PWM1
@@ -93,30 +93,26 @@ static int pwm_write (const char *path, const char *wdata)
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-int pwm_check (int id, char action, char *resp)
+int pwm_check (int dev_id, char *resp)
 {
-    int value = 0;
+    int value = 0, status = 0, id = DEVICE_ID(dev_id);
 
-    if ((id >= ePWM_END) || (access (DevicePWM[id].path, R_OK) != 0)) {
-        sprintf (resp, "%06d", 0);
-        return 0;
-    }
+    switch (id) {
+        case ePWM_0: case ePWM_1:
+            if (DEVICE_ACTION(dev_id) == 1) {
+                value = pwm_write (DevicePWM[id].path, DevicePWM[id].set);
+            }
+            else
+                value = pwm_write (DevicePWM[id].path, DevicePWM[id].clr);
 
-    switch (action) {
-        case 'S':
-            value = pwm_write (DevicePWM[id].path, DevicePWM[id].set);
-            break;
-        case 'C':
-            value = pwm_write (DevicePWM[id].path, DevicePWM[id].clr);
+            status = (value == pwm_read (DevicePWM[id].path)) ? 1 : -1;
             break;
         default :
             break;
     }
-    if (value != pwm_read (DevicePWM[id].path))
-        value = 0;
-
-    sprintf (resp, "%06d", value);
-    return 1;
+    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
+    return status;
 }
 
 //------------------------------------------------------------------------------

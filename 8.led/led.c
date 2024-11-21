@@ -55,14 +55,59 @@ struct device_led {
 //------------------------------------------------------------------------------
 struct device_led DeviceLED [eLED_END] = {
     // eLED_POWER
-    { "/sys/class/leds/red/brightness", "0", "255" },
+    { "none", "0", "255" },
     // eLED_ALIVE
-    { "/sys/class/leds/blue/brightness" , "255", "0" },
+    { "/sys/class/leds/blue:heartbeat/brightness" , "255", "0" },
 };
 
-const char *ALIVE_TRIGGER = "/sys/class/leds/blue/trigger";
+const char *ALIVE_TRIGGER = "/sys/class/leds/blue:heartbeat/trigger";
 
 //------------------------------------------------------------------------------
+#define LED_LINK_100M    100
+#define LED_LINK_1G      1000
+
+//------------------------------------------------------------------------------
+static int ethernet_link_speed (void)
+{
+    FILE *fp;
+    char cmd_line[STR_PATH_LENGTH];
+
+    if (access ("/sys/class/net/eth0/speed", F_OK) != 0)
+        return 0;
+
+    memset (cmd_line, 0x00, sizeof(cmd_line));
+    if ((fp = fopen ("/sys/class/net/eth0/speed", "r")) != NULL) {
+        memset (cmd_line, 0x00, sizeof(cmd_line));
+        if (NULL != fgets (cmd_line, sizeof(cmd_line), fp)) {
+            fclose (fp);
+            return atoi (cmd_line);
+        }
+    }
+    return 0;
+}
+
+//------------------------------------------------------------------------------
+static int ethernet_link_setup (int speed)
+{
+    FILE *fp;
+    char cmd_line[STR_PATH_LENGTH], retry = 10;
+
+    if (ethernet_link_speed () != speed) {
+        memset (cmd_line, 0x00, sizeof(cmd_line));
+        sprintf(cmd_line,"ethtool -s eth0 speed %d duplex full && sync", speed);
+        if ((fp = popen(cmd_line, "w")) != NULL)
+            pclose(fp);
+
+        // timeout 10 sec
+        while (retry--) {
+            sleep (1);
+            if (ethernet_link_speed() == speed)
+                return 1;
+        }
+        return 0;
+    }
+    return 1;
+}
 //------------------------------------------------------------------------------
 static int led_read (const char *path)
 {
@@ -96,43 +141,44 @@ static int led_write (const char *path, const char *wdata)
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-int led_check (int id, char action, char *resp)
+int led_check (int dev_id, char *resp)
 {
-    int value = 0;
+    int value = 0, status = 0, id = DEVICE_ID(dev_id);
 
-    if ((id >= eLED_END) || (access (DeviceLED[id].path, R_OK) != 0)) {
-        sprintf (resp, "%06d", 0);
-        return 0;
-    }
+    switch (id) {
+        case eLED_POWER: case eLED_ALIVE:
+            if (!strncmp (DeviceLED[id].path, "none", strlen("none"))) {
+                status = 1;
+                value  = DEVICE_ACTION(dev_id);
+            } else {
+                if (DEVICE_ACTION(dev_id) == 1)
+                    value = led_write (DeviceLED[id].path, DeviceLED[id].set);
+                else
+                    value = led_write (DeviceLED[id].path, DeviceLED[id].clr);
 
-    switch (action) {
-        case 'S':
-            value = led_write (DeviceLED[id].path, DeviceLED[id].set);
+                status = (value == led_read (DeviceLED[id].path)) ? 1 : -1;
+            }
             break;
-        case 'C':
-            value = led_write (DeviceLED[id].path, DeviceLED[id].clr);
+
+        case eLED_100M: case eLED_1G:
+            status = ethernet_link_setup ( (id == eLED_100M) ? LED_LINK_100M:LED_LINK_1G ) ? 1 : -1;
+            value  = (id == eLED_100M) ? LED_LINK_100M : LED_LINK_1G;
             break;
         default :
             break;
     }
-    if (value != led_read (DeviceLED[id].path))
-        value = 0;
 
-    sprintf (resp, "%06d", value);
-    return 1;
+    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
+    return status;
 }
 
 //------------------------------------------------------------------------------
 int led_grp_init (void)
 {
-    int id;
     // Alive LED Trigger setting
-    if (access (DeviceLED[eLED_ALIVE].path, R_OK) == 0)
+    if (access (ALIVE_TRIGGER, F_OK) == 0)
         led_write (ALIVE_TRIGGER, "none");
-
-    // Default LED status OFF
-    for (id = 0; id < eLED_END; id++)
-        led_write (DeviceLED[id].path, DeviceLED[id].clr);
 
     return 1;
 }

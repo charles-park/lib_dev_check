@@ -53,36 +53,105 @@ struct msg_info {
 }   __attribute__((packed));
 
 //------------------------------------------------------------------------------
+// https://docs.google.com/spreadsheets/d/1igBObU7CnP6FRaRt-x46l5R77-8uAKEskkhthnFwtpY/edit?gid=719914769#gid=719914769
+//------------------------------------------------------------------------------
+// DEVICE_ACTION Value
+// 0 (10 >= did) = Read, Clear, PT0
+// 1 (20 >= did) = Write, Set, PT1
+// 2 (30 >= did) = Link, PT2
+// 3 (40 >= did) = PT3
+//------------------------------------------------------------------------------
+#define DEVICE_ACTION(did)  (did / 10)
+#define DEVICE_ID(did)      (did % 10)
+
+//------------------------------------------------------------------------------
+//
+// message discription
+//
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// start |,|cmd|,|GID|,|DID |,| status |,| value(%20s) |,| end | extra  |
+//------------------------------------------------------------------------------
+//   1    1  1  1  2  1  4   1     1    1       20      1   1      2      = 36bytes(add extra 38)
+//------------------------------------------------------------------------------
+//   @   |,| S |,| 00|,|0000|,|P/F/I/W |,|  resp data  |,|  #  | '\r\n' |
+//------------------------------------------------------------------------------
+#define SERIAL_RESP_SIZE    38
+#define SERIAL_RESP_FORM(buf, gid, did, resp)  sprintf (buf, "@,S,%02d,%04d,%s,#\r\n", gid, did, resp)
+
+//#define DEVICE_RESP_SIZE    30
+#define DEVICE_RESP_SIZE    22
+#define DEVICE_RESP_FORM_INT(buf, status, value) sprintf (buf, "%c,%20d", status, value)
+#define DEVICE_RESP_FORM_STR(buf, status, value) sprintf (buf, "%c,%20s", status, value)
+
+//------------------------------------------------------------------------------
+// Group ID
+//------------------------------------------------------------------------------
 enum {
-    eGROUP_SYSTEM = 0,
-    eGROUP_STORAGE,
-    eGROUP_USB,
-    eGROUP_HDMI,
-    eGROUP_ADC,
-    eGROUP_ETHERNET,
-    eGROUP_HEADER,
-    eGROUP_AUDIO,
-    eGROUP_LED,
-    eGROUP_PWM,
-    eGROUP_END
+    eGID_SYSTEM = 0,
+    eGID_STORAGE,
+    eGID_USB,
+    eGID_HDMI,
+    eGID_ADC,
+    eGID_ETHERNET,
+    eGID_HEADER,
+    eGID_AUDIO,
+    eGID_LED,
+    eGID_PWM,
+    eGID_IR,
+    eGID_GPIO,
+    eGID_END,
 };
 
 //------------------------------------------------------------------------------
+// Device ID (eGID_HEADER)
+//------------------------------------------------------------------------------
 enum {
-    eACTION_C = 0,
-    eACTION_S,
-    eACTION_L,
-    eACTION_R,
-    eACTION_W,
-    eACTION_I,
-    eACTION_NONE,
-    eACTION_NUM,
-    eACTION_END
+    eID_HEADER_40,
+    eID_HEADER_7,
+    eID_HEADER_14,
+    eID_HEADER_END,
+};
+
+//------------------------------------------------------------------------------
+// Device ID (eGID_LED)
+//------------------------------------------------------------------------------
+enum {
+    eID_LED_POWER,
+    eID_LED_ALIVE,
+    eID_LED_M_2,
+    eID_LED_LINK_100M,
+    eID_LED_LINK_1G,
+    eID_LED_END,
+};
+
+//------------------------------------------------------------------------------
+// Device ID (eGID_PWM)
+//------------------------------------------------------------------------------
+enum {
+    eID_PWM_0,
+    eID_PWM_1,
+    eID_PWM_END,
+};
+
+//------------------------------------------------------------------------------
+// Device ID (eGID_IR)
+//------------------------------------------------------------------------------
+enum {
+    eID_IR_RUN,
+    eID_IR_END,
+};
+
+//------------------------------------------------------------------------------
+// Device ID (eGID_GPIO)
+//------------------------------------------------------------------------------
+enum {
+    eID_GPIO_END,
 };
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-extern int  device_check    (void *msg, char *resp);
+extern int  device_check    (int gid, int did, char *resp);
 extern int  device_setup    (void);
 
 //------------------------------------------------------------------------------

@@ -3,8 +3,8 @@
  * @file system.c
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-19
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -43,12 +43,6 @@ struct device_system {
     int res_x;
     int res_y;
     char fb_path[STR_PATH_LENGTH+ 1];
-
-    // read data
-    int mem;
-    int r_res_x;
-    int r_res_y;
-
 };
 
 //------------------------------------------------------------------------------
@@ -63,7 +57,7 @@ struct device_system {
 #define DEFAULT_RES_Y   480
 
 static struct device_system DeviceSYSTEM = {
-    DEFAULT_RES_X, DEFAULT_RES_Y, "/sys/class/graphics/fb0/virtual_size", 0, 0, 0
+    DEFAULT_RES_X, DEFAULT_RES_Y, "/sys/class/graphics/fb0/virtual_size"
 };
 
 //------------------------------------------------------------------------------
@@ -79,10 +73,12 @@ static int get_memory_size (void)
             mem_size = sinfo.totalram / 1024 / 1024;
 
             switch (mem_size) {
-                case    4097 ... 8192:  mem_size = 8192;    break;
-                case    2049 ... 4096:  mem_size = 4096;    break;
-                case    1025 ... 2048:  mem_size = 2048;    break;
+                case    8193 ... 16384: mem_size = 16;  break;
+                case    4097 ... 8192:  mem_size = 8;   break;
+                case    2049 ... 4096:  mem_size = 4;   break;
+                case    1025 ... 2048:  mem_size = 2;   break;
                 default :
+                    mem_size = 0;
                     break;
             }
         }
@@ -118,31 +114,6 @@ static int get_fb_size (const char *path, int id)
         }
     }
     return 0;
-}
-
-//------------------------------------------------------------------------------
-int system_check (int id, char action, char *resp)
-{
-    int value = 0, ret = 0;
-
-    switch (id) {
-        case eSYSTEM_MEM:
-            value = (action == 'I') ? DeviceSYSTEM.mem : get_memory_size();
-            ret = value ? 1 : 0;
-            break;
-        case eSYSTEM_FB_X:
-            value = (action == 'I') ? DeviceSYSTEM.r_res_x : get_fb_size (DeviceSYSTEM.fb_path, id);
-            ret = (value == DeviceSYSTEM.res_x) ? 1 : 0;
-            break;
-        case eSYSTEM_FB_Y:
-            value = (action == 'I') ? DeviceSYSTEM.r_res_y : get_fb_size (DeviceSYSTEM.fb_path, id);
-            ret = (value == DeviceSYSTEM.res_y) ? 1 : 0;
-            break;
-        default :
-            break;
-    }
-    sprintf (resp, "%06d", value);
-    return ret;
 }
 
 //------------------------------------------------------------------------------
@@ -204,15 +175,35 @@ static void default_config_read (void)
 }
 
 //------------------------------------------------------------------------------
+int system_check (int dev_id, char *resp)
+{
+    int value = 0, status = 0, id = DEVICE_ID(dev_id);
+
+    switch (id) {
+        case eSYSTEM_MEM:
+            value  = get_memory_size();
+            status = value ? 1 : -1;
+            break;
+        case eSYSTEM_FB_X:
+            value  = get_fb_size (DeviceSYSTEM.fb_path, id);
+            status = (value == DeviceSYSTEM.res_x) ? 1 : -1;
+            break;
+        case eSYSTEM_FB_Y:
+            value = get_fb_size (DeviceSYSTEM.fb_path, id);
+            status = (value == DeviceSYSTEM.res_y) ? 1 : -1;
+            break;
+        default :
+            break;
+    }
+    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
+    return status;
+}
+
+//------------------------------------------------------------------------------
 int system_grp_init (void)
 {
     default_config_read();
-
-    DeviceSYSTEM.mem = get_memory_size ();
-    if (access (DeviceSYSTEM.fb_path, R_OK) == 0) {
-        DeviceSYSTEM.r_res_x = get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_X);
-        DeviceSYSTEM.r_res_y = get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_Y);
-    }
     return 1;
 }
 
