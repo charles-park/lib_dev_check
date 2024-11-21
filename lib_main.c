@@ -52,7 +52,7 @@ const char *gid_str [] = {
     "PWM",
     "IR",
     "GPIO",
-    "I2C_ADC",
+    "F/W USB",
 };
 
 const char *action_str [] = {
@@ -128,11 +128,16 @@ const char *id_pwm_str[] = {
 };
 
 const char *id_ir_str[] = {
-    "IR_RUN",
+    "IR_EVENT",
 };
 
 const char *id_gpio_str[] = {
-    "GPIO",
+    "GPIO_PIN",
+};
+
+const char *id_fw_str[] = {
+    "FW_C4",
+    "FW_XU4",
 };
 
 //------------------------------------------------------------------------------
@@ -156,6 +161,9 @@ struct cmd_list list[eGID_END] = {
     { eGID_AUDIO   , &gid_str[eGID_AUDIO]   , &id_audio_str[0]   , eAUDIO_END    },
     { eGID_LED     , &gid_str[eGID_LED]     , &id_led_str[0]     , eLED_END      },
     { eGID_PWM     , &gid_str[eGID_PWM]     , &id_pwm_str[0]     , ePWM_END      },
+    { eGID_IR      , &gid_str[eGID_IR]      , &id_ir_str[0]      , eIR_END       },
+    { eGID_GPIO    , &gid_str[eGID_GPIO]    , &id_gpio_str[0]    , eGPIO_PIN_END },
+    { eGID_FW      , &gid_str[eGID_FW]      , &id_fw_str[0]      , eFW_END       },
 };
 
 //------------------------------------------------------------------------------
@@ -325,6 +333,8 @@ int main (int argc, char *argv[])
             DEVICE_ID(did), *(list[OPT_GROUP_ID].id_str + DEVICE_ID(did)),
             action_str [DEVICE_ACTION(did)],
             ret);
+
+        while (1)   sleep (1);
     }
     return 0;
 }

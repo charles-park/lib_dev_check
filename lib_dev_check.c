@@ -66,6 +66,9 @@ int device_check (int gid, int did, char *resp)
         case eGID_AUDIO:    status = audio_check    (did, dev_resp);  break;
         case eGID_PWM:      status = pwm_check      (did, dev_resp);  break;
         case eGID_LED:      status = led_check      (did, dev_resp);  break;
+        case eGID_IR:       status = ir_check       (did, dev_resp);  break;
+        case eGID_GPIO:     status = gpio_check     (did, dev_resp);  break;
+        case eGID_FW:       status = fw_check       (did, dev_resp);  break;
         default :
             sprintf (dev_resp, "0,%19s", "unkonwn");
             break;
@@ -85,7 +88,6 @@ int device_check (int gid, int did, char *resp)
         case eGROUP_ETHERNET:   status = ethernet_check (dev_id, action, resp); break;
         // ADC board check (server)
         case eGROUP_HEADER:     status = header_check   (dev_id, action, resp); break;
-        case eGROUP_LED:        status = led_check      (dev_id, action, resp); break;
         default :               sprintf (resp, "%06d", 0);  break;
     }
     // ms delay
@@ -107,6 +109,9 @@ int device_setup (void)
     audio_grp_init ();
     pwm_grp_init ();
     led_grp_init ();
+    ir_grp_init ();
+    gpio_grp_init ();
+    fw_grp_init();
 #if 0
     header_grp_init ();
 #endif

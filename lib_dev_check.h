@@ -26,6 +26,9 @@
 #include "7.audio/audio.h"
 #include "8.led/led.h"
 #include "9.pwm/pwm.h"
+#include "10.ir/ir.h"
+#include "11.gpio/gpio_pin.h"
+#include "12.firmware/fw.h"
 
 //------------------------------------------------------------------------------
 #define CONFIG_FILE_PATH    "/boot/"
@@ -56,13 +59,20 @@ struct msg_info {
 // https://docs.google.com/spreadsheets/d/1igBObU7CnP6FRaRt-x46l5R77-8uAKEskkhthnFwtpY/edit?gid=719914769#gid=719914769
 //------------------------------------------------------------------------------
 // DEVICE_ACTION Value
-// 0 (10 >= did) = Read, Clear, PT0
-// 1 (20 >= did) = Write, Set, PT1
-// 2 (30 >= did) = Link, PT2
-// 3 (40 >= did) = PT3
+// 0 (10 > did) = Read, Clear, PT0
+// 1 (20 > did) = Write, Set, PT1
+// 2 (30 > did) = Link, PT2
+// 3 (40 > did) = PT3
 //------------------------------------------------------------------------------
-#define DEVICE_ACTION(did)  (did / 10)
-#define DEVICE_ID(did)      (did % 10)
+#define DEVICE_ACTION(did)      (did / 10)
+#define DEVICE_ID(did)          (did % 10)
+
+//------------------------------------------------------------------------------
+// DEVICE_ACTION GPIO Value (GPIO NUM : 0 ~ 999)
+// 0 (1000 > did) = Clear
+// 1 (2000 > did) = Set
+//------------------------------------------------------------------------------
+#define DEVICE_ACTION_GPIO(did)  (did / 1000)
 
 //------------------------------------------------------------------------------
 //
@@ -100,6 +110,7 @@ enum {
     eGID_PWM,
     eGID_IR,
     eGID_GPIO,
+    eGID_FW,
     eGID_END,
 };
 
@@ -114,32 +125,12 @@ enum {
 };
 
 //------------------------------------------------------------------------------
-// Device ID (eGID_LED)
+// Device ID (eGID_FW)
 //------------------------------------------------------------------------------
 enum {
-    eID_LED_POWER,
-    eID_LED_ALIVE,
-    eID_LED_M_2,
-    eID_LED_LINK_100M,
-    eID_LED_LINK_1G,
-    eID_LED_END,
-};
-
-//------------------------------------------------------------------------------
-// Device ID (eGID_PWM)
-//------------------------------------------------------------------------------
-enum {
-    eID_PWM_0,
-    eID_PWM_1,
-    eID_PWM_END,
-};
-
-//------------------------------------------------------------------------------
-// Device ID (eGID_IR)
-//------------------------------------------------------------------------------
-enum {
-    eID_IR_RUN,
-    eID_IR_END,
+    eID_FW_C4,
+    eID_FW_XU4,
+    eID_FW_END,
 };
 
 //------------------------------------------------------------------------------
