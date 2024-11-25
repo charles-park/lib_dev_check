@@ -328,11 +328,13 @@ int main (int argc, char *argv[])
         sleep (2);
         ret = device_check (OPT_GROUP_ID, did, resp);
 
-        printf ("GROUP_ID(%d) = %s, DEVICE_ID(%d) = %s, ACTION(%s), ret = %d\n",
-            OPT_GROUP_ID, *list[OPT_GROUP_ID].g_str,
-            DEVICE_ID(did), *(list[OPT_GROUP_ID].id_str + DEVICE_ID(did)),
-            action_str [DEVICE_ACTION(did)],
-            ret);
+        if (OPT_GROUP_ID < eGID_END) {
+            printf ("GROUP_ID(%d) = %s, DEVICE_ID(%d) = %s, ACTION(%s), ret = %d\n",
+                OPT_GROUP_ID, *list[OPT_GROUP_ID].g_str,
+                DEVICE_ID(did), *(list[OPT_GROUP_ID].id_str + DEVICE_ID(did)),
+                action_str [DEVICE_ACTION(did)],
+                ret);
+        }
 
         while (1)   sleep (1);
     }

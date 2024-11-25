@@ -42,8 +42,8 @@
 
 //------------------------------------------------------------------------------
 #include "../lib_dev_check.h"
-#include "lib_mac/lib_mac.h"
-#include "lib_efuse/lib_efuse.h"
+#include "../lib_mac/lib_mac.h"
+#include "../lib_efuse/lib_efuse.h"
 #include "ethernet.h"
 
 //------------------------------------------------------------------------------

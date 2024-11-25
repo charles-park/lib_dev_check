@@ -173,6 +173,7 @@ static int fw_write (int id)
     sprintf (cmd, "%s --vid=2109 -pid=0817 -script=%s && sync",
                 DeviceFW[id].exec_path, DeviceFW[id].fw_path);
 
+    printf ("%s : %s\n", __func__, cmd);
     if ((fp = popen (cmd, "r")) != NULL) {
         memset (rdata, 0, sizeof(rdata));
         while (fgets (rdata, sizeof(rdata), fp) != NULL) {
@@ -193,6 +194,9 @@ static int fw_version_check (int id)
     if (fw_version_read (id)) {
         if (!strncmp (DeviceFW[id].fw_ver, DeviceFW[id].check_ver, strlen(DeviceFW[id].check_ver)))
             return 1;
+
+        printf ("%s : firmware version check error! (read %s : check %s)\n",
+                            __func__, DeviceFW[id].fw_ver, DeviceFW[id].check_ver);
 
         if (fw_write (id)) {
             usb_hub_reset ();
@@ -238,8 +242,11 @@ int fw_grp_init (void)
             if (find_file_path (DeviceFW[id].exec_name, DeviceFW[id].exec_path) &&
                 find_file_path (DeviceFW[id].fw_name,   DeviceFW[id].fw_path)) {
                 printf ("%s : (%s)%s\n", __func__, DeviceFW[id].exec_path, DeviceFW[id].fw_path);
+                if (fw_version_check (id)) {
+                    printf ("%s : firmware version pass (read %s : check %s)\n",
+                                    __func__, DeviceFW[id].fw_ver, DeviceFW[id].check_ver);
 
-                fw_version_check (id);
+                }
             }
         }
     }

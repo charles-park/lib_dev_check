@@ -70,7 +70,7 @@ int device_check (int gid, int did, char *resp)
         case eGID_GPIO:     status = gpio_check     (did, dev_resp);  break;
         case eGID_FW:       status = fw_check       (did, dev_resp);  break;
         default :
-            sprintf (dev_resp, "0,%19s", "unkonwn");
+            sprintf (dev_resp, "0,%20s", "unkonwn");
             break;
     }
 
