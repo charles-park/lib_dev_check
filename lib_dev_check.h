@@ -38,23 +38,6 @@
 #define STR_NAME_LENGTH     16
 
 //------------------------------------------------------------------------------
-#define SIZE_UI_ID      4
-#define SIZE_GRP_ID     2
-#define SIZE_DEV_ID     3
-#define SIZE_EXTRA      6
-
-struct msg_info {
-    char    start;
-    char    cmd;
-    char    ui_id [SIZE_UI_ID];
-    char    grp_id[SIZE_GRP_ID];
-    char    dev_id[SIZE_DEV_ID];
-    char    action;
-    // extra data (response delay or mac write)
-    char    extra [SIZE_EXTRA];
-    char    end;
-}   __attribute__((packed));
-
 //------------------------------------------------------------------------------
 // https://docs.google.com/spreadsheets/d/1igBObU7CnP6FRaRt-x46l5R77-8uAKEskkhthnFwtpY/edit?gid=719914769#gid=719914769
 //------------------------------------------------------------------------------
@@ -87,10 +70,11 @@ struct msg_info {
 //   @   |,| S |,| 00|,|0000|,|P/F/I/W |,|  resp data  |,|  #  | '\r\n' |
 //------------------------------------------------------------------------------
 #define SERIAL_RESP_SIZE    38
-#define SERIAL_RESP_FORM(buf, gid, did, resp)  sprintf (buf, "@,S,%02d,%04d,%s,#\r\n", gid, did, resp)
+#define SERIAL_RESP_FORM(buf, gid, did, resp)   sprintf (buf, "@,S,%02d,%04d,%s,#\r\n", gid, did, resp)
 
-//#define DEVICE_RESP_SIZE    30
-#define DEVICE_RESP_SIZE    22
+#define DEVICE_GID_SIZE     2
+#define DEVICE_DID_SIZE     4
+#define DEVICE_RESP_SIZE    22  // [status(1), value(20)]
 #define DEVICE_RESP_FORM_INT(buf, status, value) sprintf (buf, "%c,%20d", status, value)
 #define DEVICE_RESP_FORM_STR(buf, status, value) sprintf (buf, "%c,%20s", status, value)
 
@@ -112,16 +96,6 @@ enum {
     eGID_GPIO,
     eGID_FW,
     eGID_END,
-};
-
-//------------------------------------------------------------------------------
-// Device ID (eGID_HEADER)
-//------------------------------------------------------------------------------
-enum {
-    eID_HEADER_40,
-    eID_HEADER_7,
-    eID_HEADER_14,
-    eID_HEADER_END,
 };
 
 //------------------------------------------------------------------------------

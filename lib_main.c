@@ -261,10 +261,9 @@ static void parse_opts (int argc, char *argv[])
     }
 }
 
-
 //------------------------------------------------------------------------------
 //
-// message discription
+// message discription (serial)
 //
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -273,22 +272,6 @@ static void parse_opts (int argc, char *argv[])
 //   1    1  1  1  2  1  4   1     1    1       20      1   1      2      = 36bytes(add extra 38)
 //------------------------------------------------------------------------------
 //   @   |,| S |,| 00|,|0000|,|P/F/I/W |,|  resp data  |,|  #  | '\r\n' |
-//------------------------------------------------------------------------------
-#if 0
-struct dev_resp_t {
-}   __attribute__((packed));
-
-typedef union dev_resp__u {
-    struct dev_resp_t   bits;
-    char                str[sizeof(struct dev_resp_t)];
-    dev_resp_t
-}   dev_resp_u __attribute__((packed));
-#endif
-
-#define MSG_SIZE    38
-#define MSG_FORM(buf, resp)    sprintf (buf, "@,S,%s,#\n", resp)
-// test console
-
 //------------------------------------------------------------------------------
 void make_msg (int grp_id, int dev_id, char *resp)
 {

@@ -3,8 +3,8 @@
  * @file header.c
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-25
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -36,268 +36,70 @@
 #include "../lib_dev_check.h"
 #include "../lib_gpio/lib_gpio.h"
 #include "header.h"
-
-//------------------------------------------------------------------------------
-//
-// Configuration
-//
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-//
-// ODROID-M1S Header GPIOs Define
-//
-//------------------------------------------------------------------------------
-// Not Control
-#define NC  0
-
-const int HEADER14[] = {
-    // Header J3 GPIOs
-     NC,        // Not used (pin 0)
-     NC,  NC,   // | 01 : DC_JACK  || 02 : 3.3V      |
-     NC,  NC,   // | 03 : USB D_P  || 04 : AUDIO_R   |
-     NC,  NC,   // | 05 : USB D_M  || 06 : AUDIO_GND |
-     NC,  NC,   // | 07 : GND      || 08 : AUDIO_L   |
-     NC,  NC,   // | 09 : PWRBTN   || 10 : RESET_H   |
-    116, 117,   // | 11 : GPIO3_C4 || 12 : GPIO3_C5  |
-    107, 108,   // | 13 : GPIO3_B3 || 14 : GPIO3_B4  |
-};
-
-const int HEADER40[] = {
-    // Header J4 GPIOs
-     NC,        // Not used (pin 0)
-     NC,  NC,   // | 01 : 3.3V     || 02 : 5.0V     |
-    110,  NC,   // | 03 : I2C_SDA1 || 04 : 5.0V     |
-    109,  NC,   // | 05 : I2C_SCL1 || 06 : GND      |
-     14,  68,   // | 07 : GPIO0_B6 || 08 : GPIO2_A4 |
-     NC,  67,   // | 09 : GND      || 10 : GPIO2_A3 |
-     16,  71,   // | 11 : GPIO0_C0 || 12 : GPIO2_A7 |
-     17,  NC,   // | 13 : GPIO0_C1 || 14 : GND      |
-     18,  77,   // | 15 : GPIO0_C2 || 16 : GPIO2_B5 |
-     NC,  78,   // | 17 : 3.3V     || 18 : GPIO3_B6 |
-    113,  NC,   // | 19 : GPIO3_C1 || 20 : GND      |
-    114,  72,   // | 21 : GPIO3_C2 || 22 : GPIO2_B0 |
-    115,  97,   // | 23 : GPIO3_C3 || 24 : GPIO3_A1 |
-     NC,  73,   // | 25 : GND      || 26 : GPIO2_B1 |
-     12,  11,   // | 27 : GPIO0_B4 || 28 : GPIO2_B3 |
-     80,  NC,   // | 29 : GPIO2_C0 || 30 : GND      |
-     79,  74,   // | 31 : GPIO2_B7 || 32 : GPIO2_B2 |
-     13,  NC,   // | 33 : GPIO0_B5 || 34 : GND      |
-     69,  70,   // | 35 : GPIO0_A5 || 36 : GPIO2_A6 |
-     NC,  NC,   // | 37 : ADC.AIN1 || 38 : 1.8V     |
-     NC,  NC,   // | 39 : PWRBTN   || 40 : ADC.AIN0 |
-};
-
-//------------------------------------------------------------------------------
-#define PATTERN_COUNT   4
-
-const int H14_PATTERN[PATTERN_COUNT][sizeof(HEADER14)] = {
-    // Pattern 0 : ALL High
-    {
-        // Header J3 GPIOs
-        NC,     // Not used (pin 0)
-        NC, NC, // | 01 : DC_JACK  || 02 : 3.3V      |
-        NC, NC, // | 03 : USB D_P  || 04 : AUDIO_R   |
-        NC, NC, // | 05 : USB D_M  || 06 : AUDIO_GND |
-        NC, NC, // | 07 : GND      || 08 : AUDIO_L   |
-        NC, NC, // | 09 : PWRBTN   || 10 : RESET_H   |
-         1,  1, // | 11 : GPIO3_C4 || 12 : GPIO3_C5  |
-         1,  1, // | 13 : GPIO3_B3 || 14 : GPIO3_B4  |
-    },
-    // Pattern 1 : ALL Low
-    {
-        // Header J3 GPIOs
-        NC,     // Not used (pin 0)
-        NC, NC, // | 01 : DC_JACK  || 02 : 3.3V      |
-        NC, NC, // | 03 : USB D_P  || 04 : AUDIO_R   |
-        NC, NC, // | 05 : USB D_M  || 06 : AUDIO_GND |
-        NC, NC, // | 07 : GND      || 08 : AUDIO_L   |
-        NC, NC, // | 09 : PWRBTN   || 10 : RESET_H   |
-         0,  0, // | 11 : GPIO3_C4 || 12 : GPIO3_C5  |
-         0,  0, // | 13 : GPIO3_B3 || 14 : GPIO3_B4  |
-    },
-    // Pattern 2 : Cross 0
-    {
-        // Header J3 GPIOs
-        NC,     // Not used (pin 0)
-        NC, NC, // | 01 : DC_JACK  || 02 : 3.3V      |
-        NC, NC, // | 03 : USB D_P  || 04 : AUDIO_R   |
-        NC, NC, // | 05 : USB D_M  || 06 : AUDIO_GND |
-        NC, NC, // | 07 : GND      || 08 : AUDIO_L   |
-        NC, NC, // | 09 : PWRBTN   || 10 : RESET_H   |
-         0,  1, // | 11 : GPIO3_C4 || 12 : GPIO3_C5  |
-         1,  0, // | 13 : GPIO3_B3 || 14 : GPIO3_B4  |
-    },
-    // Pattern 3 : Cross 1
-    {
-        // Header J3 GPIOs
-        NC,     // Not used (pin 0)
-        NC, NC, // | 01 : DC_JACK  || 02 : 3.3V      |
-        NC, NC, // | 03 : USB D_P  || 04 : AUDIO_R   |
-        NC, NC, // | 05 : USB D_M  || 06 : AUDIO_GND |
-        NC, NC, // | 07 : GND      || 08 : AUDIO_L   |
-        NC, NC, // | 09 : PWRBTN   || 10 : RESET_H   |
-         1,  0, // | 11 : GPIO3_C4 || 12 : GPIO3_C5  |
-         0,  1, // | 13 : GPIO3_B3 || 14 : GPIO3_B4  |
-    },
-};
-
-const int H40_PATTERN[PATTERN_COUNT][sizeof(HEADER40)] = {
-    // Pattern 0 : ALL High
-    {
-        // Header J4 GPIOs
-        NC,        // Not used (pin 0)
-        NC, NC,   // | 01 : 3.3V     || 02 : 5.0V     |
-         1, NC,   // | 03 : I2C_SDA1 || 04 : 5.0V     |
-         1, NC,   // | 05 : I2C_SCL1 || 06 : GND      |
-         1,  1,   // | 07 : GPIO0_B6 || 08 : GPIO2_A4 |
-        NC,  1,   // | 09 : GND      || 10 : GPIO2_A3 |
-         1,  1,   // | 11 : GPIO0_C0 || 12 : GPIO2_A7 |
-         1, NC,   // | 13 : GPIO0_C1 || 14 : GND      |
-         1,  1,   // | 15 : GPIO0_C2 || 16 : GPIO2_B5 |
-        NC,  1,   // | 17 : 3.3V     || 18 : GPIO3_B6 |
-         1, NC,   // | 19 : GPIO3_C1 || 20 : GND      |
-         1,  1,   // | 21 : GPIO3_C2 || 22 : GPIO2_B0 |
-         1,  1,   // | 23 : GPIO3_C3 || 24 : GPIO3_A1 |
-        NC,  1,   // | 25 : GND      || 26 : GPIO2_B1 |
-         1,  1,   // | 27 : GPIO0_B4 || 28 : GPIO2_B3 |
-         1, NC,   // | 29 : GPIO2_C0 || 30 : GND      |
-         1,  1,   // | 31 : GPIO2_B7 || 32 : GPIO2_B2 |
-         1, NC,   // | 33 : GPIO0_B5 || 34 : GND      |
-         1,  1,   // | 35 : GPIO0_A5 || 36 : GPIO2_A6 |
-        NC, NC,   // | 37 : ADC.AIN1 || 38 : 1.8V     |
-        NC, NC,   // | 39 : PWRBTN   || 40 : ADC.AIN0 |
-    },
-    // Pattern 1 : ALL Low
-    {
-        // Header J4 GPIOs
-        NC,        // Not used (pin 0)
-        NC, NC,   // | 01 : 3.3V     || 02 : 5.0V     |
-         0, NC,   // | 03 : I2C_SDA1 || 04 : 5.0V     |
-         0, NC,   // | 05 : I2C_SCL1 || 06 : GND      |
-         0,  0,   // | 07 : GPIO0_B6 || 08 : GPIO2_A4 |
-        NC,  0,   // | 09 : GND      || 10 : GPIO2_A3 |
-         0,  0,   // | 11 : GPIO0_C0 || 12 : GPIO2_A7 |
-         0, NC,   // | 13 : GPIO0_C1 || 14 : GND      |
-         0,  0,   // | 15 : GPIO0_C2 || 16 : GPIO2_B5 |
-        NC,  0,   // | 17 : 3.3V     || 18 : GPIO3_B6 |
-         0, NC,   // | 19 : GPIO3_C1 || 20 : GND      |
-         0,  0,   // | 21 : GPIO3_C2 || 22 : GPIO2_B0 |
-         0,  0,   // | 23 : GPIO3_C3 || 24 : GPIO3_A1 |
-        NC,  0,   // | 25 : GND      || 26 : GPIO2_B1 |
-         0,  0,   // | 27 : GPIO0_B4 || 28 : GPIO2_B3 |
-         0, NC,   // | 29 : GPIO2_C0 || 30 : GND      |
-         0,  0,   // | 31 : GPIO2_B7 || 32 : GPIO2_B2 |
-         0, NC,   // | 33 : GPIO0_B5 || 34 : GND      |
-         0,  0,   // | 35 : GPIO0_A5 || 36 : GPIO2_A6 |
-        NC, NC,   // | 37 : ADC.AIN1 || 38 : 1.8V     |
-        NC, NC,   // | 39 : PWRBTN   || 40 : ADC.AIN0 |
-    },
-    // Pattern 2 : Cross 0
-    {
-        // Header J4 GPIOs
-        NC,        // Not used (pin 0)
-        NC, NC,   // | 01 : 3.3V     || 02 : 5.0V     |
-         0, NC,   // | 03 : I2C_SDA1 || 04 : 5.0V     |
-         1, NC,   // | 05 : I2C_SCL1 || 06 : GND      |
-         0,  1,   // | 07 : GPIO0_B6 || 08 : GPIO2_A4 |
-        NC,  0,   // | 09 : GND      || 10 : GPIO2_A3 |
-         0,  1,   // | 11 : GPIO0_C0 || 12 : GPIO2_A7 |
-         1, NC,   // | 13 : GPIO0_C1 || 14 : GND      |
-         0,  1,   // | 15 : GPIO0_C2 || 16 : GPIO2_B5 |
-        NC,  0,   // | 17 : 3.3V     || 18 : GPIO3_B6 |
-         1, NC,   // | 19 : GPIO3_C1 || 20 : GND      |
-         0,  1,   // | 21 : GPIO3_C2 || 22 : GPIO2_B0 |
-         1,  0,   // | 23 : GPIO3_C3 || 24 : GPIO3_A1 |
-        NC,  1,   // | 25 : GND      || 26 : GPIO2_B1 |
-         1,  0,   // | 27 : GPIO0_B4 || 28 : GPIO2_B3 |
-         0, NC,   // | 29 : GPIO2_C0 || 30 : GND      |
-         1,  0,   // | 31 : GPIO2_B7 || 32 : GPIO2_B2 |
-         0, NC,   // | 33 : GPIO0_B5 || 34 : GND      |
-         1,  0,   // | 35 : GPIO0_A5 || 36 : GPIO2_A6 |
-        NC, NC,   // | 37 : ADC.AIN1 || 38 : 1.8V     |
-        NC, NC,   // | 39 : PWRBTN   || 40 : ADC.AIN0 |
-    },
-    // Pattern 3 : Cross 1
-    {
-        // Header J4 GPIOs
-        NC,        // Not used (pin 0)
-        NC, NC,   // | 01 : 3.3V     || 02 : 5.0V     |
-         1, NC,   // | 03 : I2C_SDA1 || 04 : 5.0V     |
-         0, NC,   // | 05 : I2C_SCL1 || 06 : GND      |
-         1,  0,   // | 07 : GPIO0_B6 || 08 : GPIO2_A4 |
-        NC,  1,   // | 09 : GND      || 10 : GPIO2_A3 |
-         1,  0,   // | 11 : GPIO0_C0 || 12 : GPIO2_A7 |
-         0, NC,   // | 13 : GPIO0_C1 || 14 : GND      |
-         1,  0,   // | 15 : GPIO0_C2 || 16 : GPIO2_B5 |
-        NC,  1,   // | 17 : 3.3V     || 18 : GPIO3_B6 |
-         0, NC,   // | 19 : GPIO3_C1 || 20 : GND      |
-         1,  0,   // | 21 : GPIO3_C2 || 22 : GPIO2_B0 |
-         0,  1,   // | 23 : GPIO3_C3 || 24 : GPIO3_A1 |
-        NC,  0,   // | 25 : GND      || 26 : GPIO2_B1 |
-         0,  1,   // | 27 : GPIO0_B4 || 28 : GPIO2_B3 |
-         1, NC,   // | 29 : GPIO2_C0 || 30 : GND      |
-         0,  1,   // | 31 : GPIO2_B7 || 32 : GPIO2_B2 |
-         1, NC,   // | 33 : GPIO0_B5 || 34 : GND      |
-         0,  1,   // | 35 : GPIO0_A5 || 36 : GPIO2_A6 |
-        NC, NC,   // | 37 : ADC.AIN1 || 38 : 1.8V     |
-        NC, NC,   // | 39 : PWRBTN   || 40 : ADC.AIN0 |
-    },
-};
+#include "header_c4.h"
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-static int pattern_write (int pattern)
+static int pattern_write (int id, int pattern)
 {
-    if (pattern < PATTERN_COUNT) {
-        int i;
-        for (i = 0; i < (int)(sizeof(HEADER14)/sizeof(int)); i++) {
-            if (HEADER14[i]) {
-                gpio_direction (HEADER14[i], GPIO_DIR_OUT);
-                gpio_set_value (HEADER14[i], H14_PATTERN[pattern][i]);
-            }
-        }
-        for (i = 0; i < (int)(sizeof(HEADER40)/sizeof(int)); i++) {
-            if (HEADER40[i]) {
-                gpio_direction (HEADER40[i], GPIO_DIR_OUT);
-                gpio_set_value (HEADER40[i], H40_PATTERN[pattern][i]);
-            }
-        }
-        return 1;
+    int cnt = 0, err_cnt = 0, read = 0, nc_pin_cnt = 0;
+    int gpio_cnt = 0, *gpio_pattern, *gpio_list;
+
+    switch (id) {
+        case eHEADER_7:
+            gpio_cnt     = sizeof(HEADER7)/sizeof(HEADER7[0]);
+            gpio_pattern = (int *)HEADER7_PATTERN[pattern];
+            gpio_list    = (int *)HEADER7;
+            break;
+        case eHEADER_14:
+            gpio_cnt     = sizeof(HEADER14)/sizeof(HEADER14[0]);
+            gpio_pattern = (int *)HEADER14_PATTERN[pattern];
+            gpio_list    = (int *)HEADER14;
+            break;
+        case eHEADER_40:
+            gpio_cnt     = sizeof(HEADER40)/sizeof(HEADER40[0]);
+            gpio_pattern = (int *)HEADER40_PATTERN[pattern];
+            gpio_list    = (int *)HEADER40;
+            break;
+        default:
+            printf ("%s : unknown header (id = %d)\n", __func__, id);
+            return 0;
     }
-    return 0;
+
+    for (cnt = 0; cnt < gpio_cnt; cnt++) {
+        if (gpio_list[cnt] != NC) {
+            gpio_set_value (gpio_list[cnt], gpio_pattern[cnt]);
+            gpio_get_value (gpio_list[cnt], &read);
+            if (read != gpio_pattern[cnt]) {
+                printf ("%s : error, num = %d gpio = %d, set = %d, get = %d\n",
+                    __func__, cnt, gpio_list[cnt], gpio_pattern [cnt], read);
+                err_cnt++;
+            }
+        } else nc_pin_cnt++;
+    }
+    if (nc_pin_cnt == gpio_cnt) {
+        printf ("%s : not used header id(%d)\n", __func__, id);
+        return 0;
+    }
+    return err_cnt ? 0 : 1;
 }
 
 //------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-int header_check (int id, char action, char *resp)
+int header_check (int dev_id, char *resp)
 {
-    int ret_value = 0, value = 0;
+    int value = 0, status = 0, id = DEVICE_ID(dev_id);
 
-    if (id) {
-        switch (action) {
-            case 'S':   case 'C':
-                // gpio control
-                if (gpio_direction (id, GPIO_DIR_OUT)) {
-                    value = (action == 'S') ? 1 : 0;
-                    ret_value = gpio_set_value (id, value);
-                }
-                break;
-            case 'R':
-                if (gpio_direction (id, GPIO_DIR_IN))
-                    ret_value = gpio_get_value (id, &value);
-                break;
-            default :
-                ret_value = gpio_get_value (id, &value);
-                break;
-        }
-    } else {
-        // header14, header40 pattern test
-        value = action - '0';
-        ret_value = pattern_write (value);
+    switch (id) {
+        case eHEADER_40: case eHEADER_14: case eHEADER_7:
+            status = pattern_write (id, DEVICE_ACTION(dev_id)) ? 1 : -1;
+            value  = DEVICE_ACTION(dev_id);
+            break;
+        default :
+            break;
     }
-
-    sprintf (resp, "%06d", value);
-    return ret_value;
+    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
+    return status;
 }
 
 //------------------------------------------------------------------------------
@@ -305,11 +107,26 @@ int header_grp_init (void)
 {
     int i;
 
-    for (i = 0; i < (int)(sizeof(HEADER14)/sizeof(int)); i++)
-        gpio_export (HEADER14[i]);
+    for (i = 0; i < (int)(sizeof(HEADER7)/sizeof(int)); i++) {
+        if (HEADER7[i] != NC) {
+            gpio_export    (HEADER7[i]);
+            gpio_direction (HEADER7[i], 1);
+        }
+    }
 
-    for (i = 0; i < (int)(sizeof(HEADER40)/sizeof(int)); i++)
-        gpio_export (HEADER40[i]);
+    for (i = 0; i < (int)(sizeof(HEADER14)/sizeof(int)); i++) {
+        if (HEADER14[i] != NC) {
+            gpio_export    (HEADER14[i]);
+            gpio_direction (HEADER14[i], 1);
+        }
+    }
+
+    for (i = 0; i < (int)(sizeof(HEADER40)/sizeof(int)); i++) {
+        if (HEADER40[i] != NC) {
+            gpio_export    (HEADER40[i]);
+            gpio_direction (HEADER40 [i], 1);
+        }
+    }
 
     return 1;
 }

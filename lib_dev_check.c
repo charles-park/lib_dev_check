@@ -34,16 +34,6 @@
 #include "lib_dev_check.h"
 
 //------------------------------------------------------------------------------
-int str_to_int (char *str, int str_size)
-{
-    char conv[10];
-
-    memset (conv, 0, sizeof(conv));
-    memcpy (conv, str, str_size);
-    return atoi (conv);
-}
-
-//------------------------------------------------------------------------------
 //
 // status value : 0 -> Wait, 1 -> Success, -1 -> Error
 //
@@ -63,6 +53,7 @@ int device_check (int gid, int did, char *resp)
         case eGID_STORAGE:  status = storage_check  (did, dev_resp);  break;
         case eGID_USB:      status = usb_check      (did, dev_resp);  break;
         case eGID_ETHERNET: status = ethernet_check (did, dev_resp);  break;
+        case eGID_HEADER:   status = header_check   (did, dev_resp);  break;
         case eGID_AUDIO:    status = audio_check    (did, dev_resp);  break;
         case eGID_PWM:      status = pwm_check      (did, dev_resp);  break;
         case eGID_LED:      status = led_check      (did, dev_resp);  break;
@@ -77,44 +68,38 @@ int device_check (int gid, int did, char *resp)
     SERIAL_RESP_FORM(resp, gid, did, dev_resp);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
 
-#if 0
-    struct msg_info *m_info = (struct msg_info *)msg;
-    int grp_id  = str_to_int (m_info->grp_id, SIZE_GRP_ID);
-    int dev_id  = str_to_int (m_info->dev_id, SIZE_DEV_ID);
-    // extra data or delay ms
-    int extra   = str_to_int (m_info->extra, SIZE_EXTRA);
-    char action = toupper    (m_info->action);
-    switch(grp_id) {
-        case eGROUP_ETHERNET:   status = ethernet_check (dev_id, action, resp); break;
-        // ADC board check (server)
-        case eGROUP_HEADER:     status = header_check   (dev_id, action, resp); break;
-        default :               sprintf (resp, "%06d", 0);  break;
-    }
-    // ms delay
-    if (extra)
-        usleep (extra * 1000);
-#endif
     return status;
 }
 
 //------------------------------------------------------------------------------
 int device_setup (void)
 {
+    // usb f/w upgrade check
+    fw_grp_init();
+    // iperf, ip, mac, check
+    ethernet_grp_init ();
+
+    // sysfile read
     system_grp_init ();
-    storage_grp_init ();
-    usb_grp_init ();
     hdmi_grp_init ();
     adc_grp_init ();
-    ethernet_grp_init ();
-    audio_grp_init ();
-    pwm_grp_init ();
-    led_grp_init ();
+
+    // thread func
     ir_grp_init ();
-    gpio_grp_init ();
-    fw_grp_init();
-#if 0
+    storage_grp_init ();
+    usb_grp_init ();
+
+    // i2c ADC check
     header_grp_init ();
-#endif
+    // audio 1Khz L, R
+    audio_grp_init ();
+    // pwm1, pwm2
+    pwm_grp_init ();
+    // alive, power, eth_green, eth_orange
+    led_grp_init ();
+    // gpio number test
+    gpio_grp_init ();
+
     return 1;
 }
 

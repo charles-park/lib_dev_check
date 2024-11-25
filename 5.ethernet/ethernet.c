@@ -369,12 +369,54 @@ static int ethernet_mac_check (char *resp)
 }
 
 //------------------------------------------------------------------------------
+pthread_t thread_iperf3;
+volatile int ThreadRunning = 0;
+
+static void *thread_iperf3_func (void *arg)
+{
+    FILE *fp;
+    char cmd_line [STR_PATH_LENGTH], *pstr = NULL;
+
+    printf ("%s : thread running!\n", __func__);
+    ThreadRunning = 1;
+    memset (cmd_line, 0, sizeof(cmd_line));
+    if ((fp = popen("iperf3 -s -1", "r")) != NULL) {
+        while (fgets(cmd_line, sizeof(cmd_line), fp)) {
+            if (strstr (cmd_line, "receiver") != NULL) {
+                if ((pstr = strstr (cmd_line, "MBytes")) != NULL) {
+                    while (*pstr != ' ')    pstr++;
+                    DeviceETHERNET.iperf_speed = atoi (pstr);
+                    break;
+                }
+            }
+            memset (cmd_line, 0, sizeof(cmd_line));
+        }
+        pclose(fp);
+        printf ("%s : popen stop = %d\n", __func__, DeviceETHERNET.iperf_speed);
+    }
+    ThreadRunning = 0;
+    printf ("%s : thread stop!\n", __func__);
+    return arg;
+}
+
+//------------------------------------------------------------------------------
 static int ethernet_iperf_check (char *resp)
 {
     int status = 0;
 
-    status = (DeviceETHERNET.iperf_speed > DEFAULT_IPERF_SPEED) ? 1 : -1;
-    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', DeviceETHERNET.iperf_speed);
+    status = (DeviceETHERNET.board_ip_int[0] != 0) ? 1 : -1;
+
+    if (status) {
+        // iperf3 server one-shot running (iperf3 -s -1)
+        if (ThreadRunning) {
+            int retry = 5;
+            while ((retry--) && (pthread_kill (thread_iperf3, 0) != ESRCH))
+                usleep (100000);
+        }
+        pthread_create (&thread_iperf3, NULL, thread_iperf3_func, (void *)&DeviceETHERNET);
+    }
+
+    DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', DeviceETHERNET.board_ip_str);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;
 }
@@ -465,7 +507,8 @@ int ethernet_grp_init (void)
 
     if (ethernet_board_ip ()) {
         ethernet_efuse_check ();
-        ethernet_server_ip   ();
+        // iperf server, nlp server
+        // ethernet_server_ip   ();
     }
     return 1;
 }

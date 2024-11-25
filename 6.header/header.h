@@ -3,8 +3,8 @@
  * @file header.h
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-25
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -17,19 +17,24 @@
 #define __HEADER_H__
 
 //------------------------------------------------------------------------------
+// Not Control
+#define NC              -1
+#define PATTERN_COUNT   4
+
 //------------------------------------------------------------------------------
 // Define the Device ID for the HEADER group.
 //------------------------------------------------------------------------------
 enum {
     eHEADER_40,
-    eHEADER_GPIO,
+    eHEADER_7,
+    eHEADER_14,
     eHEADER_END
 };
 
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int header_check     (int id, char action, char *resp);
+extern int header_check     (int dev_id, char *resp);
 extern int header_grp_init  (void);
 
 //------------------------------------------------------------------------------
