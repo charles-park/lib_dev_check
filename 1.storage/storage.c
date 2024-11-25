@@ -69,7 +69,7 @@ static volatile int pthreadEnable = 0;
 /* define storage devices */
 //------------------------------------------------------------------------------
 // Boot device define (uSD)
-#define BOOT_DEVICE     eSTORAGE_uSD
+#define BOOT_DEVICE     eSTORAGE_eMMC
 #define TEMP_FILE       "/tmp/wdat"
 
 // ODROID-C4
@@ -80,9 +80,9 @@ struct device_storage DeviceSTORAGE [eSTORAGE_END] = {
     // eSTORAGE_uSD (boot device : /root)
     { "/dev/mmcblk1",  DEFAULT_uSD_R,  DEFAULT_uSD_W,   0 },
     // eSTORAGE_SATA
-    {            " ", DEFAULT_SATA_R, DEFAULT_SATA_W,   0 },
+    {         "none", DEFAULT_SATA_R, DEFAULT_SATA_W,   0 },
     // eSTORAGE_NVME
-    {            " ", DEFAULT_NVME_R, DEFAULT_NVME_W,   0 },
+    {         "none", DEFAULT_NVME_R, DEFAULT_NVME_W,   0 },
 };
 
 // Storage Read / Write (16 Mbytes, 1 block count)
@@ -244,6 +244,9 @@ void *thread_func_storage (void *arg)
     pthreadEnable = 1;
     while (retry--) {
         for (id = 0, pass_item = 0; id < eSTORAGE_END; id++) {
+            if (!strncmp (DeviceSTORAGE[id].path, "none", strlen("none")))
+                DeviceSTORAGE[id].value = -1;
+
             if ((DeviceSTORAGE[id].value != -1) && (DeviceSTORAGE[id].value < DeviceSTORAGE[id].r_min))
                  DeviceSTORAGE[id].value = storage_rw (DeviceSTORAGE[id].path, STORAGE_R_CHECK);
             else

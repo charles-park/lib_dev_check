@@ -83,7 +83,7 @@ struct device_usb DeviceUSB [eUSB_END] = {
     // eUSB_4, USB_R_UP
     { "/sys/bus/usb/devices/2-1.2", DEFAULT_USB30_R, DEFAULT_USB30_W, DEFAULT_USB30_L, 0 },
     // eUSB_5, none
-    {                          " ", DEFAULT_USB30_R, DEFAULT_USB30_W, DEFAULT_USB30_L, 0 },
+    {                      "none ", DEFAULT_USB30_R, DEFAULT_USB30_W, DEFAULT_USB30_L, 0 },
 };
 
 // USB Read / Write (16 Mbytes, 1 block count)
@@ -264,6 +264,9 @@ void *thread_func_usb (void *arg)
     pthreadEnable = 1;
     while (retry--) {
         for (id = 0, pass_item = 0; id < eUSB_END; id++) {
+            if (!strncmp(DeviceUSB[id].path, "none", strlen("none")))
+                DeviceUSB[id].value = -1;
+
             if ((DeviceUSB[id].value != -1) && (DeviceUSB[id].value < DeviceUSB[id].r_min))
                  DeviceUSB[id].value = usb_rw (DeviceUSB[id].path, USB_R_CHECK);
             else

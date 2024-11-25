@@ -452,7 +452,7 @@ static void default_config_write (const char *fname)
     // default value write
     fputs   ("# info : iperf check speed \n", fp);
     memset  (value, 0, sizeof(value));
-    sprintf (value, "%d,\n", DeviceETHERNET.iperf_check_speed);
+    sprintf (value, "%d,\n", DEFAULT_IPERF_SPEED);
     fputs   (value, fp);
     fclose  (fp);
 }

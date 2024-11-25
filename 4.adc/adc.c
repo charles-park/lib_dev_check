@@ -65,9 +65,9 @@ struct device_adc {
 //------------------------------------------------------------------------------
 struct device_adc DeviceADC [eADC_END] = {
     // eADC_H37 (Header 37) - const 1.358V
-    { "/sys/bus/iio/devices/iio:device0/in_voltage3_raw", DEFAULT_ADC_H37_H, DEFAULT_ADC_H37_L },
+    { "/sys/bus/iio/devices/iio:device0/in_voltage2_raw", DEFAULT_ADC_H37_H, DEFAULT_ADC_H37_L },
     // eADC_H40 (Header 40) - const 0.441V
-    { "/sys/bus/iio/devices/iio:device0/in_voltage2_raw", DEFAULT_ADC_H40_H, DEFAULT_ADC_H40_L },
+    { "/sys/bus/iio/devices/iio:device0/in_voltage0_raw", DEFAULT_ADC_H40_H, DEFAULT_ADC_H40_L },
 };
 
 //------------------------------------------------------------------------------
