@@ -38,13 +38,11 @@
 // status value : 0 -> Wait, 1 -> Success, -1 -> Error
 //
 //------------------------------------------------------------------------------
-int device_check (int gid, int did, char *resp)
+int device_check (int gid, int did, char *dev_resp)
 {
     int status  = 0;
-    char dev_resp[DEVICE_RESP_SIZE];
 
-    memset (resp, 0, SERIAL_RESP_SIZE);
-    memset (dev_resp, 0, sizeof(dev_resp));
+    memset (dev_resp, 0, DEVICE_RESP_SIZE);
 
     switch(gid) {
         case eGID_SYSTEM:   status = system_check   (did, dev_resp);  break;
@@ -64,9 +62,7 @@ int device_check (int gid, int did, char *resp)
             sprintf (dev_resp, "0,%20s", "unkonwn");
             break;
     }
-
-    SERIAL_RESP_FORM(resp, gid, did, dev_resp);
-    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(dev_resp), dev_resp);
 
     return status;
 }

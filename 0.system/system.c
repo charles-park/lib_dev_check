@@ -192,6 +192,8 @@ int system_check (int dev_id, char *resp)
             value = get_fb_size (DeviceSYSTEM.fb_path, id);
             status = (value == DeviceSYSTEM.res_y) ? 1 : -1;
             break;
+        case eSYSTEM_FB_SIZE:
+            break;
         default :
             break;
     }

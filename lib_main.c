@@ -35,8 +35,7 @@
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-//#if defined(__LIB_DEV_CHECK_APP__)
-#if 1
+#if defined(__LIB_DEV_CHECK_APP__)
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 const char *gid_str [] = {
@@ -273,16 +272,15 @@ static void parse_opts (int argc, char *argv[])
 //------------------------------------------------------------------------------
 //   @   |,| S |,| 00|,|0000|,|P/F/I/W |,|  resp data  |,|  #  | '\r\n' |
 //------------------------------------------------------------------------------
-void make_msg (int grp_id, int dev_id, char *resp)
+void make_msg (int grp_id, int dev_id, char *dev_resp)
 {
-    char dev_msg[SERIAL_RESP_SIZE];
+    char msg[SERIAL_RESP_SIZE];
 
-    memset (dev_msg, 0, sizeof(dev_msg));
+    memset (msg, 0, sizeof(msg));
 
-//#define SERIAL_RESP_FORM(buf, gid, did, resp)  sprintf (buf, "@,S,%02d,%04d,%s,#\r\n", gid, did, resp)
-    SERIAL_RESP_FORM (dev_msg, grp_id, DEVICE_ID(dev_id), resp);
+    SERIAL_RESP_FORM (msg, 'S', grp_id, DEVICE_ID(dev_id), dev_resp);
 
-    printf ("response [msg = %s], size = [%ld]\n", dev_msg, strlen(dev_msg));
+    printf ("\nResponse : size = %ld, msg = %s\n", strlen(msg), msg);
 }
 
 //------------------------------------------------------------------------------
@@ -305,11 +303,11 @@ int main (int argc, char *argv[])
     device_setup ();
     {
         int ret, did = OPT_DEVICE_ID + (OPT_ACTION * 10);
-        char resp [SERIAL_RESP_SIZE];
+        char dev_resp [DEVICE_RESP_SIZE];
 
         // device thread wait
         sleep (2);
-        ret = device_check (OPT_GROUP_ID, did, resp);
+        ret = device_check (OPT_GROUP_ID, did, dev_resp);
 
         if (OPT_GROUP_ID < eGID_END) {
             printf ("GROUP_ID(%d) = %s, DEVICE_ID(%d) = %s, ACTION(%s), ret = %d\n",
@@ -317,6 +315,8 @@ int main (int argc, char *argv[])
                 DEVICE_ID(did), *(list[OPT_GROUP_ID].id_str + DEVICE_ID(did)),
                 action_str [DEVICE_ACTION(did)],
                 ret);
+            // Serial msg
+            make_msg (OPT_GROUP_ID, did, dev_resp);
         }
 
         while (1)   sleep (1);

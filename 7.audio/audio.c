@@ -55,8 +55,7 @@ struct device_audio {
 //------------------------------------------------------------------------------
 /* define audio devices */
 //------------------------------------------------------------------------------
-#define PLAY_TIME_SEC   5
-#define THREAD_KILL_CNT 5
+#define PLAY_TIME_SEC   2
 
 struct device_audio DeviceAUDIO [eAUDIO_END] = {
     // AUDIO LEFT
@@ -108,6 +107,8 @@ pthread_t audio_thread;
 
 volatile int AudioEnable = 0;
 
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
 //------------------------------------------------------------------------------
 void *audio_thread_func (void *arg)
 {
@@ -122,7 +123,7 @@ void *audio_thread_func (void *arg)
         sprintf (cmd, "aplay -Dhw:1,0 %s -d %d && sync",
                                 paudio->path, paudio->play_time);
 
-        if ((fp = popen (cmd, "r")) != NULL)
+        if ((fp = popen (cmd, "w")) != NULL)
             pclose(fp);
     }
     AudioEnable = 0;
@@ -133,18 +134,15 @@ void *audio_thread_func (void *arg)
 //------------------------------------------------------------------------------
 int audio_check (int dev_id, char *resp)
 {
-    int value = THREAD_KILL_CNT, status = 0, id = DEVICE_ID(dev_id);
+    int status = 0, id = DEVICE_ID(dev_id);
 
     switch (id) {
         case eAUDIO_LEFT: case eAUDIO_RIGHT:
             if (AudioEnable) {
-                while ((value--) && (pthread_kill (audio_thread, 0) != ESRCH))
-                    usleep (1000);
-
-                printf ("audio_thread killed %s!\n", value ? "success" : "fail");
-
-                // thread kill fail
-                if (!value) {   status = -1;    break; }
+                printf ("AudioEnable True. Try audio_thread cancel...\r\n");
+                pthread_cancel(audio_thread);       usleep (100 *1000);
+                pthread_cond_signal(&cond);
+                pthread_join(audio_thread, NULL);   usleep (100 *1000);
             }
 
             status = 1;

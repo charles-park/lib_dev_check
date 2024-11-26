@@ -407,16 +407,28 @@ static int ethernet_iperf_check (char *resp)
     status = (DeviceETHERNET.board_ip_int[0] != 0) ? 1 : -1;
 
     if (status) {
-        // iperf3 server one-shot running (iperf3 -s -1)
-        if (ThreadRunning) {
-            int retry = 5;
-            while ((retry--) && (pthread_kill (thread_iperf3, 0) != ESRCH))
-                usleep (100000);
-        }
-        pthread_create (&thread_iperf3, NULL, thread_iperf3_func, (void *)&DeviceETHERNET);
+        if (!ThreadRunning)
+            pthread_create (&thread_iperf3, NULL, thread_iperf3_func, (void *)&DeviceETHERNET);
     }
 
     DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', DeviceETHERNET.board_ip_str);
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
+    return status;
+}
+
+//------------------------------------------------------------------------------
+static int ethernet_server_check (char *resp)
+{
+    int status = 0;
+
+    if (DeviceETHERNET.board_ip_int[0]) {
+        if (DeviceETHERNET.server_ip_str[0] != 0)   status = 1;
+        else
+            ethernet_server_ip   ();
+
+        DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'P' : 'F', DeviceETHERNET.server_ip_str);
+    }
+
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;
 }
@@ -432,6 +444,7 @@ int ethernet_check (int dev_id, char *resp)
         case eETHERNET_MAC:     return ethernet_mac_check   (resp);
         case eETHERNET_IPERF:   return ethernet_iperf_check (resp);
         case eETHERNET_LINK:    return ethernet_link_check  (resp);
+        case eETHERNET_SERVER:  return ethernet_server_check(resp);
         default:
             break;
     }

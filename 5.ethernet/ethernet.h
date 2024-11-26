@@ -29,6 +29,8 @@ enum {
     eETHERNET_IPERF,
     /* S = eth 1G setting, C = eth 100M setting, I = init valuue, R = read link speed */
     eETHERNET_LINK,
+    /* NLP Server IP (Port 8888 ~ )*/
+    eETHERNET_SERVER,
     eETHERNET_END
 };
 
