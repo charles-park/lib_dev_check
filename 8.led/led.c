@@ -168,7 +168,7 @@ int led_check (int dev_id, char *resp)
             break;
     }
 
-    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
+    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'C' : 'F', value);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;
 }

@@ -70,6 +70,7 @@ struct device_ethernet {
     int  board_ip_int [4];   // aaa.bbb.ccc.ddd
 
     char server_ip_str [sizeof(struct sockaddr)+1];
+    int  server_ip_int [4];   // aaa.bbb.ccc.ddd
 
     int  board_mac_validate;
     char board_mac_str[MAC_STR_SIZE +1];
@@ -128,10 +129,10 @@ static void ip_str_to_int (char *ip_str, int *ip_int)
 {
     char *tok;
 
-    tok = strtok(ip_str, ".");  ip_int [0] = atoi(tok);
-    tok = strtok(NULL  , ".");  ip_int [1] = atoi(tok);
-    tok = strtok(NULL  , ".");  ip_int [2] = atoi(tok);
-    tok = strtok(NULL  , ".");  ip_int [3] = atoi(tok);
+    tok = strtok(ip_str, ".");  if (tok != NULL)    ip_int [0] = atoi(tok);
+    tok = strtok(NULL  , ".");  if (tok != NULL)    ip_int [1] = atoi(tok);
+    tok = strtok(NULL  , ".");  if (tok != NULL)    ip_int [2] = atoi(tok);
+    tok = strtok(NULL  , ".");  if (tok != NULL)    ip_int [3] = atoi(tok);
 }
 
 //------------------------------------------------------------------------------
@@ -200,6 +201,8 @@ static int ethernet_server_ip (void)
     FILE *fp;
     char cmd_line[STR_PATH_LENGTH], *ip_tok;
 
+    if (DeviceETHERNET.server_ip_int[0] != 0)   return 1;
+
     memset(cmd_line, 0, sizeof(cmd_line));
     sprintf(cmd_line, "nmap %d.%d.%d.* -p T:%4d --open 2<&1",
         DeviceETHERNET.board_ip_int[0],
@@ -217,9 +220,15 @@ static int ethernet_server_ip (void)
             if (ip_tok != NULL) {
                 printf ("%s : %s\n", __func__, ip_tok);
                 if (net_status (ip_tok)) {
+                    ip_str_to_int (ip_tok, DeviceETHERNET.server_ip_int);
+
                     // ip_addr arrary size = 20 bytes
                     memset (DeviceETHERNET.server_ip_str, 0, sizeof (DeviceETHERNET.server_ip_str));
-                    strncpy(DeviceETHERNET.server_ip_str, ip_tok, strlen(ip_tok)-1);
+                    sprintf(DeviceETHERNET.server_ip_str, "%d.%d.%d.%d",
+                                                DeviceETHERNET.server_ip_int[0],
+                                                DeviceETHERNET.server_ip_int[1],
+                                                DeviceETHERNET.server_ip_int[2],
+                                                DeviceETHERNET.server_ip_int[3]);
                     pclose(fp);
                     return 1;
                 }
@@ -422,9 +431,9 @@ static int ethernet_server_check (char *resp)
     int status = 0;
 
     if (DeviceETHERNET.board_ip_int[0]) {
-        if (DeviceETHERNET.server_ip_str[0] != 0)   status = 1;
-        else
-            ethernet_server_ip   ();
+        ethernet_server_ip   ();
+
+        if (DeviceETHERNET.server_ip_int[0] != 0)   status = 1;
 
         DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'P' : 'F', DeviceETHERNET.server_ip_str);
     }

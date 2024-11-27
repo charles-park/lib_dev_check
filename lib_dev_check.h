@@ -69,20 +69,19 @@
 //------------------------------------------------------------------------------
 //   @   |,| S |,| 00|,|0000|,|P/F/I/W |,|  resp data  |,|  #  | '\r\n' |
 //------------------------------------------------------------------------------
-#define SERIAL_RESP_SIZE    38
-//#define SERIAL_RESP_FORM(buf, gid, did, resp)   sprintf (buf, "@,S,%02d,%04d,%s,#\r\n", gid, did, resp)
+#define SERIAL_RESP_SIZE    36
 #define RESP_CMD_STATUS     'S'
 #define RESP_CMD_REQUEST    'R'
 #define RESP_CMD_BOOT       'B'
 #define RESP_CMD_ERROR      'E'
 
-#define SERIAL_RESP_FORM(buf, cmd, gid, did, resp)   sprintf (buf, "@,%c,%02d,%04d,%22s,#\r\n", cmd, gid, did, resp)
-
 #define DEVICE_GID_SIZE     2
 #define DEVICE_DID_SIZE     4
 #define DEVICE_RESP_SIZE    22  // [status(1), value(20)]
-#define DEVICE_RESP_FORM_INT(buf, status, value) sprintf (buf, "%c,%20d", status, value)
-#define DEVICE_RESP_FORM_STR(buf, status, value) sprintf (buf, "%c,%20s", status, value)
+
+#define SERIAL_RESP_FORM(buf, cmd, gid, did, resp)  sprintf (buf, "@,%c,%02d,%04d,%22s,#", cmd, gid, did, resp)
+#define DEVICE_RESP_FORM_INT(buf, status, value)    sprintf (buf, "%c,%20d", status, value)
+#define DEVICE_RESP_FORM_STR(buf, status, value)    sprintf (buf, "%c,%20s", status, value)
 
 //------------------------------------------------------------------------------
 // Group ID

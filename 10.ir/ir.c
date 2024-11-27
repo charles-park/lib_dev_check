@@ -125,7 +125,7 @@ int ir_check (int dev_id, char *resp)
         default :
             break;
     }
-    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
+    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'C', value);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;
 }

@@ -53,8 +53,9 @@ struct device_system {
 /* define system devices */
 //------------------------------------------------------------------------------
 // Client LCD res (vu5)
-#define DEFAULT_RES_X   800
-#define DEFAULT_RES_Y   480
+// ODROID-C4
+#define DEFAULT_RES_X   (800)
+#define DEFAULT_RES_Y   (480 * 2)
 
 static struct device_system DeviceSYSTEM = {
     DEFAULT_RES_X, DEFAULT_RES_Y, "/sys/class/graphics/fb0/virtual_size"
@@ -193,6 +194,11 @@ int system_check (int dev_id, char *resp)
             status = (value == DeviceSYSTEM.res_y) ? 1 : -1;
             break;
         case eSYSTEM_FB_SIZE:
+            if ((DeviceSYSTEM.res_x == DEFAULT_RES_X) &&
+                (DeviceSYSTEM.res_y == DEFAULT_RES_Y))
+                status = 1;
+            else
+                value = -1;
             break;
         default :
             break;

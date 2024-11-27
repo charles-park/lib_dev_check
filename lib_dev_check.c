@@ -34,6 +34,27 @@
 #include "lib_dev_check.h"
 
 //------------------------------------------------------------------------------
+//#define SERIAL_RESP_FORM(buf, cmd, gid, did, resp)   sprintf (buf, "@,%1c,%02d,%04d,%22s,#\r\n", cmd, gid, did, resp)
+//#define DEVICE_RESP_FORM_INT(buf, status, value) sprintf (buf, "%1c,%20d", status, value)
+//#define DEVICE_RESP_FORM_STR(buf, status, value) sprintf (buf, "%1c,%20s", status, value)
+
+#if 0
+//void DEVICE_RESP_FORM_INT (void *buf, char cmd, int gid, int did, void *resp)
+//void DEVICE_RESP_FORM_STR (void *buf, char cmd, int gid, int did, void *resp)
+
+void SERIAL_RESP_FORM (void *buf, char cmd, int gid, int did, void *resp)
+{
+    int pos;
+
+    memset  (buf, 0, SERIAL_RESP_SIZE);
+    pos = sprintf (buf, "@,%c,%02d,%04d,%-22s,#\r\n", cmd, gid, did, resp);
+
+//    pos = sprintf (buf, "@,%c,%02d,%04d,%21s,", cmd, gid, did, resp);
+//    memcpy (&buf[pos], &resp[0], DEVICE_RESP_SIZE);
+}
+#endif
+
+//------------------------------------------------------------------------------
 //
 // status value : 0 -> Wait, 1 -> Success, -1 -> Error
 //
