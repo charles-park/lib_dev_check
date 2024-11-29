@@ -104,9 +104,22 @@ enum {
 };
 
 //------------------------------------------------------------------------------
+typedef struct parse_resp_data__t {
+    char    cmd;
+    int     gid;
+    int     did;
+    char    status_c;
+    int     status_i;
+    char    resp_s[DEVICE_RESP_SIZE +1];
+    int     resp_i;
+}   parse_resp_data_t;
+
 //------------------------------------------------------------------------------
-extern int  device_check    (int gid, int did, char *resp);
-extern int  device_setup    (void);
+extern int  device_resp_parse   (const char *resp, parse_resp_data_t *pdata);
+extern int  device_resp_check   (parse_resp_data_t *pdata);
+//------------------------------------------------------------------------------
+extern int  device_check        (int gid, int did, char *resp);
+extern int  device_setup        (void);
 
 //------------------------------------------------------------------------------
 #endif  // __LIB_DEV_TEST_H__

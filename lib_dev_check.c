@@ -34,25 +34,79 @@
 #include "lib_dev_check.h"
 
 //------------------------------------------------------------------------------
-//#define SERIAL_RESP_FORM(buf, cmd, gid, did, resp)   sprintf (buf, "@,%1c,%02d,%04d,%22s,#\r\n", cmd, gid, did, resp)
-//#define DEVICE_RESP_FORM_INT(buf, status, value) sprintf (buf, "%1c,%20d", status, value)
-//#define DEVICE_RESP_FORM_STR(buf, status, value) sprintf (buf, "%1c,%20s", status, value)
-
-#if 0
-//void DEVICE_RESP_FORM_INT (void *buf, char cmd, int gid, int did, void *resp)
-//void DEVICE_RESP_FORM_STR (void *buf, char cmd, int gid, int did, void *resp)
-
-void SERIAL_RESP_FORM (void *buf, char cmd, int gid, int did, void *resp)
+int device_resp_parse (const char *resp_msg, parse_resp_data_t *pdata)
 {
-    int pos;
+    int msg_size = (int)strlen(resp_msg);
+    char *ptr, resp[DEVICE_RESP_SIZE+1];
 
-    memset  (buf, 0, SERIAL_RESP_SIZE);
-    pos = sprintf (buf, "@,%c,%02d,%04d,%-22s,#\r\n", cmd, gid, did, resp);
+    if ((msg_size != SERIAL_RESP_SIZE) && (msg_size != DEVICE_RESP_SIZE)) {
+        printf ("%s : unknown resp size = %d, resp = %s\n", __func__, msg_size, resp_msg);
+        return 0;
+    }
 
-//    pos = sprintf (buf, "@,%c,%02d,%04d,%21s,", cmd, gid, did, resp);
-//    memcpy (&buf[pos], &resp[0], DEVICE_RESP_SIZE);
+    memset (resp,   0, sizeof(resp));
+    memset (pdata,  0, sizeof(parse_resp_data_t));
+
+    // copy org msg
+    memcpy (resp, resp_msg, DEVICE_RESP_SIZE);
+
+    if ((ptr = strtok (resp, ",")) != NULL) {
+        if (msg_size == SERIAL_RESP_SIZE) {
+            // cmd
+            if ((ptr = strtok (NULL, ",")) != NULL) pdata->cmd = *ptr;
+            // gid
+            if ((ptr = strtok (NULL, ",")) != NULL) pdata->gid = atoi(ptr);
+            // did
+            if ((ptr = strtok (NULL, ",")) != NULL) pdata->did = atoi(ptr);
+        }
+        // status
+        if (ptr != NULL) {
+            pdata->status_c =  *ptr;
+            pdata->status_i = (*ptr == 'P') ? 1 : 0;
+        }
+        // resp str
+        if ((ptr = strtok (NULL, ",")) != NULL) {
+            {
+                int i, pos;
+                for (i = 0, pos = 0; i < DEVICE_RESP_SIZE; i++)
+                {
+                    if (*(ptr + i) != 0x20)
+                        pdata->resp_s[pos++] = *(ptr + i);
+                }
+            }
+            pdata->resp_i = atoi(ptr);
+        }
+        return 1;
+    }
+    return 0;
 }
-#endif
+
+//------------------------------------------------------------------------------
+int device_resp_check (parse_resp_data_t *pdata)
+{
+    switch (pdata->gid) {
+        /* IR Thread running */
+        case eGID_IR:
+            return 0;
+         case eGID_ETHERNET:
+            if (pdata->did == eETHERNET_IPERF)  return 0;
+            break;
+        case eGID_LED:
+            pdata->status_i = led_data_check (pdata->did, pdata->resp_i);
+            break;
+        case eGID_HEADER:
+            pdata->status_i = header_data_check (pdata->did, pdata->resp_s);
+            break;
+
+        /* not implement */
+        case eGID_PWM: case eGID_GPIO: case eGID_AUDIO:
+        default:
+            pdata->status_i = 0;
+            break;
+    }
+    // device_data_check ok
+    return 1;
+}
 
 //------------------------------------------------------------------------------
 //
