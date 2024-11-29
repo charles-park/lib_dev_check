@@ -194,8 +194,8 @@ int system_check (int dev_id, char *resp)
             status = (value == DeviceSYSTEM.res_y) ? 1 : -1;
             break;
         case eSYSTEM_FB_SIZE:
-            if ((DeviceSYSTEM.res_x == DEFAULT_RES_X) &&
-                (DeviceSYSTEM.res_y == DEFAULT_RES_Y))
+            if ((get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_X) == DEFAULT_RES_X) &&
+                (get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_Y) == DEFAULT_RES_Y))
                 status = 1;
             else
                 value = -1;
