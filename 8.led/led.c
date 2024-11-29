@@ -94,7 +94,7 @@ static int ethernet_link_setup (int speed)
 
     if (ethernet_link_speed () != speed) {
         memset (cmd_line, 0x00, sizeof(cmd_line));
-        sprintf(cmd_line,"ethtool -s eth0 speed %d duplex full && sync", speed);
+        sprintf(cmd_line,"ethtool -s eth0 speed %d duplex full 2>&1 && sync ", speed);
         if ((fp = popen(cmd_line, "w")) != NULL)
             pclose(fp);
 
@@ -141,6 +141,26 @@ static int led_write (const char *path, const char *wdata)
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
+int led_data_check (int dev_id, int resp_i)
+{
+    int status = 0, id = DEVICE_ID(dev_id);
+    switch (id) {
+        case eLED_100M: case eLED_1G:
+                status = (resp_i > 1000) ? 1 : 0;   // led on
+            break;
+        case eLED_ALIVE: case eLED_POWER:
+            if (DEVICE_ACTION(dev_id))
+                // adc value
+                status = (resp_i > 1000) ? 1 : 0;   // led on
+            else
+                status = (resp_i < 100) ? 1 : 0;    // led off
+
+            break;
+    }
+    return status;
+}
+
+//------------------------------------------------------------------------------
 int led_check (int dev_id, char *resp)
 {
     int value = 0, status = 0, id = DEVICE_ID(dev_id);
@@ -158,17 +178,21 @@ int led_check (int dev_id, char *resp)
 
                 status = (value == led_read (DeviceLED[id].path)) ? 1 : -1;
             }
+            DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F',
+                                    (id == eLED_POWER) ? "P1_6.8" : "P1_6.7");
             break;
 
         case eLED_100M: case eLED_1G:
             status = ethernet_link_setup ( (id == eLED_100M) ? LED_LINK_100M:LED_LINK_1G ) ? 1 : -1;
             value  = (id == eLED_100M) ? LED_LINK_100M : LED_LINK_1G;
+
+            DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F',
+                                    (id == eLED_100M) ? "P1_6.6" : "P1_6.5");
             break;
         default :
             break;
     }
 
-    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'C' : 'F', value);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;
 }

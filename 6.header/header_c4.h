@@ -77,7 +77,7 @@ const int HEADER40[] = {
 };
 
 //------------------------------------------------------------------------------
-const int HEADER7_PATTERN[PATTERN_COUNT][sizeof(HEADER7)] = {
+const int HEADER7_PATTERN[PATTERN_COUNT][sizeof(HEADER7)/sizeof(HEADER7[0])] = {
     // Pattern 0 : ALL High
     {
         // Header J7 GPIOs
@@ -116,7 +116,7 @@ const int HEADER7_PATTERN[PATTERN_COUNT][sizeof(HEADER7)] = {
     },
 };
 
-const int HEADER14_PATTERN[PATTERN_COUNT][sizeof(HEADER14)] = {
+const int HEADER14_PATTERN[PATTERN_COUNT][sizeof(HEADER14)/sizeof(HEADER14[0])] = {
     // Pattern 0 : ALL High
     {
         NC,        // Not used (pin 0)
@@ -163,7 +163,7 @@ const int HEADER14_PATTERN[PATTERN_COUNT][sizeof(HEADER14)] = {
     },
 };
 
-const int HEADER40_PATTERN[PATTERN_COUNT][sizeof(HEADER40)] = {
+const int HEADER40_PATTERN[PATTERN_COUNT][sizeof(HEADER40)/sizeof(HEADER40[0])] = {
     // Pattern 0 : ALL High
     {
         // Header J4 GPIOs

@@ -73,7 +73,8 @@ struct device_ethernet {
     int  server_ip_int [4];   // aaa.bbb.ccc.ddd
 
     int  board_mac_validate;
-    char board_mac_str[MAC_STR_SIZE +1];
+    char board_mac_str[20];
+    char board_mac[MAC_STR_SIZE +1];
 
     int iperf_speed;
     int iperf_check_speed;
@@ -138,26 +139,29 @@ static void ip_str_to_int (char *ip_str, int *ip_int)
 //------------------------------------------------------------------------------
 static int ethernet_board_ip (void)
 {
-    int fd;
+    int fd, retry_cnt = 10;
     struct ifreq ifr;
     char ip_addr[sizeof(struct sockaddr)+1];
 
+retry:
+    usleep (500 * 1000);    // 500ms delay
     /* this entire function is almost copied from ethtool source code */
     /* Open control socket. */
     if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
     {
         fprintf (stdout, "Cannot get control socket\n");
+        if (retry_cnt--)    goto retry;
         return 0;
     }
     strncpy(ifr.ifr_name, "eth0", IFNAMSIZ);
     if (ioctl(fd, SIOCGIFADDR, &ifr) < 0) {
         fprintf (stdout, "SIOCGIFADDR ioctl Error!!\n");
         close(fd);
+        if (retry_cnt--)    goto retry;
         return 0;
     }
     memset (ip_addr, 0x00, sizeof(ip_addr));
     inet_ntop(AF_INET, ifr.ifr_addr.sa_data+2, ip_addr, sizeof(struct sockaddr));
-
     printf ("%s : ip_address = %s\n", __func__, ip_addr);
 
     ip_str_to_int (ip_addr, DeviceETHERNET.board_ip_int);
@@ -171,6 +175,29 @@ static int ethernet_board_ip (void)
 }
 
 //------------------------------------------------------------------------------
+char *get_board_ip (void)
+{
+    if (ethernet_board_ip())
+        return DeviceETHERNET.board_ip_str;
+
+    return NULL;
+}
+
+char *get_mac_addr (void)
+{
+    if (DeviceETHERNET.board_mac_validate)
+        return DeviceETHERNET.board_mac_str;
+
+    return NULL;
+}
+
+int get_ethernet_iperf (void)
+{
+    return DeviceETHERNET.iperf_speed;
+}
+
+//------------------------------------------------------------------------------
+#if 0
 static int ethernet_board_ip_file (void)
 {
     FILE *fp;
@@ -194,7 +221,7 @@ static int ethernet_board_ip_file (void)
     }
     return 0;
 }
-
+#endif
 //------------------------------------------------------------------------------
 static int ethernet_server_ip (void)
 {
@@ -251,8 +278,8 @@ static int ethernet_mac_write (const char *model)
             memset (efuse, 0, sizeof(efuse));
             if (efuse_control (efuse, EFUSE_READ)) {
                 if (efuse_valid_check (efuse)) {
-                    memset (DeviceETHERNET.board_mac_str, 0, sizeof(DeviceETHERNET.board_mac_str));
-                    efuse_get_mac (efuse, DeviceETHERNET.board_mac_str);
+                    memset (DeviceETHERNET.board_mac, 0, sizeof(DeviceETHERNET.board_mac));
+                    efuse_get_mac (efuse, DeviceETHERNET.board_mac);
                     return 1;
                 }
             }
@@ -282,7 +309,14 @@ static void ethernet_efuse_check (void)
         }
 
         if (DeviceETHERNET.board_mac_validate) {
-            efuse_get_mac (efuse, DeviceETHERNET.board_mac_str);
+            efuse_get_mac (efuse, DeviceETHERNET.board_mac);
+            sprintf (DeviceETHERNET.board_mac_str, "%c%c:%c%c:%c%c:%c%c:%c%c:%c%c",
+                DeviceETHERNET.board_mac[0], DeviceETHERNET.board_mac[1],
+                DeviceETHERNET.board_mac[2], DeviceETHERNET.board_mac[3],
+                DeviceETHERNET.board_mac[4], DeviceETHERNET.board_mac[5],
+                DeviceETHERNET.board_mac[6], DeviceETHERNET.board_mac[7],
+                DeviceETHERNET.board_mac[8], DeviceETHERNET.board_mac[9],
+                DeviceETHERNET.board_mac[10], DeviceETHERNET.board_mac[11]);
             printf ("%s : mac address = %s\n", __func__, DeviceETHERNET.board_mac_str);
         }
         else
@@ -404,7 +438,7 @@ static void *thread_iperf3_func (void *arg)
         printf ("%s : popen stop = %d\n", __func__, DeviceETHERNET.iperf_speed);
     }
     ThreadRunning = 0;
-    printf ("%s : thread stop!\n", __func__);
+    printf ("%s : thread stop! iperf_speed = %d\n", __func__, DeviceETHERNET.iperf_speed);
     return arg;
 }
 
@@ -413,14 +447,17 @@ static int ethernet_iperf_check (char *resp)
 {
     int status = 0;
 
-    status = (DeviceETHERNET.board_ip_int[0] != 0) ? 1 : -1;
-
-    if (status) {
-        if (!ThreadRunning)
+    if (DeviceETHERNET.board_ip_int[0] != 0) {
+        if (!ThreadRunning && !DeviceETHERNET.iperf_speed)
             pthread_create (&thread_iperf3, NULL, thread_iperf3_func, (void *)&DeviceETHERNET);
+
+        if (DeviceETHERNET.iperf_speed)
+            status = (DeviceETHERNET.iperf_speed > DeviceETHERNET.iperf_check_speed) ? 1 : -1;
     }
 
-    DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', DeviceETHERNET.board_ip_str);
+    if (status) DEVICE_RESP_FORM_INT(resp, 'P', DeviceETHERNET.iperf_speed);
+    else        DEVICE_RESP_FORM_STR(resp, 'C', DeviceETHERNET.board_ip_str);
+
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;
 }

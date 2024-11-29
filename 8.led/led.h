@@ -31,6 +31,7 @@ enum {
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
+extern int led_data_check(int dev_id, int resp_i);
 extern int led_check     (int dev_id, char *resp);
 extern int led_grp_init  (void);
 

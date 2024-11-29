@@ -44,10 +44,16 @@ struct device_adc {
     int max, min;
 };
 
+
 //------------------------------------------------------------------------------
-// default adc range (mV). ADC res 1.7578125mV (1800mV / 1024 bits)
+// default adc range (mV). ADC res 1.7578125mV (1800mV / ADC RESOLUTION)
 // adc voltage = adc raw read * ADC res (1.75)
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+#define ADC_BITS            12      // ODROID-C4
+#define ADC_REF_VOLTAGE     (1800)
+#define ADC_RESOLUTION      (1<<ADC_BITS)
+
 // const 1.358V
 #define DEFAULT_ADC_H37_H   1400
 #define DEFAULT_ADC_H37_L   1340
@@ -75,7 +81,6 @@ struct device_adc DeviceADC [eADC_END] = {
 static int adc_read (const char *path)
 {
     char rdata[16];
-    int mV = 0;
     FILE *fp;
 
     memset (rdata, 0, sizeof (rdata));
@@ -85,8 +90,7 @@ static int adc_read (const char *path)
         fclose(fp);
     }
 
-    mV = (atoi (rdata) * 175) / 100;
-    return mV;
+    return (atoi (rdata) * ADC_REF_VOLTAGE) / ADC_RESOLUTION;
 }
 
 //------------------------------------------------------------------------------
