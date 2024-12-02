@@ -37,7 +37,7 @@
 int device_resp_parse (const char *resp_msg, parse_resp_data_t *pdata)
 {
     int msg_size = (int)strlen(resp_msg);
-    char *ptr, resp[DEVICE_RESP_SIZE+1];
+    char *ptr, resp[SERIAL_RESP_SIZE+1];
 
     if ((msg_size != SERIAL_RESP_SIZE) && (msg_size != DEVICE_RESP_SIZE)) {
         printf ("%s : unknown resp size = %d, resp = %s\n", __func__, msg_size, resp_msg);
@@ -48,7 +48,7 @@ int device_resp_parse (const char *resp_msg, parse_resp_data_t *pdata)
     memset (pdata,  0, sizeof(parse_resp_data_t));
 
     // copy org msg
-    memcpy (resp, resp_msg, DEVICE_RESP_SIZE);
+    memcpy (resp, resp_msg, msg_size);
 
     if ((ptr = strtok (resp, ",")) != NULL) {
         if (msg_size == SERIAL_RESP_SIZE) {
@@ -58,7 +58,10 @@ int device_resp_parse (const char *resp_msg, parse_resp_data_t *pdata)
             if ((ptr = strtok (NULL, ",")) != NULL) pdata->gid = atoi(ptr);
             // did
             if ((ptr = strtok (NULL, ",")) != NULL) pdata->did = atoi(ptr);
+
+            ptr = strtok (NULL, ",");
         }
+
         // status
         if (ptr != NULL) {
             pdata->status_c =  *ptr;
@@ -68,9 +71,9 @@ int device_resp_parse (const char *resp_msg, parse_resp_data_t *pdata)
         if ((ptr = strtok (NULL, ",")) != NULL) {
             {
                 int i, pos;
-                for (i = 0, pos = 0; i < DEVICE_RESP_SIZE; i++)
+                for (i = 0, pos = 0; i < DEVICE_RESP_SIZE -2; i++)
                 {
-                    if (*(ptr + i) != 0x20)
+                    if ((*(ptr + i) != 0x20) && (*(ptr + i) != 0x00))
                         pdata->resp_s[pos++] = *(ptr + i);
                 }
             }
