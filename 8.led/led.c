@@ -146,14 +146,14 @@ int led_data_check (int dev_id, int resp_i)
     int status = 0, id = DEVICE_ID(dev_id);
     switch (id) {
         case eLED_100M: case eLED_1G:
-                status = (resp_i > 1000) ? 1 : 0;   // led on
+                status = (resp_i > 400) ? 1 : 0;    // led on
             break;
         case eLED_ALIVE: case eLED_POWER:
             if (DEVICE_ACTION(dev_id))
                 // adc value
-                status = (resp_i > 1000) ? 1 : 0;   // led on
+                status = (resp_i > 700) ? 1 : 0;    // led on
             else
-                status = (resp_i < 100) ? 1 : 0;    // led off
+                status = (resp_i < 400) ? 1 : 0;    // led off
 
             break;
     }
@@ -179,7 +179,7 @@ int led_check (int dev_id, char *resp)
                 status = (value == led_read (DeviceLED[id].path)) ? 1 : -1;
             }
             DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F',
-                                    (id == eLED_POWER) ? "P1_6.8" : "P1_6.7");
+                                    (id == eLED_POWER) ? "P1_6.3" : "P1_6.4");
             break;
 
         case eLED_100M: case eLED_1G:
@@ -187,7 +187,7 @@ int led_check (int dev_id, char *resp)
             value  = (id == eLED_100M) ? LED_LINK_100M : LED_LINK_1G;
 
             DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F',
-                                    (id == eLED_100M) ? "P1_6.6" : "P1_6.5");
+                                    (id == eLED_100M) ? "P1_6.5" : "P1_6.6");
             break;
         default :
             break;
