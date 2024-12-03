@@ -183,8 +183,11 @@ int led_check (int dev_id, char *resp)
             break;
 
         case eLED_100M: case eLED_1G:
-            status = ethernet_link_setup ( (id == eLED_100M) ? LED_LINK_100M:LED_LINK_1G ) ? 1 : -1;
-            value  = (id == eLED_100M) ? LED_LINK_100M : LED_LINK_1G;
+            // swap id (if led off)
+            if (DEVICE_ACTION(dev_id) == 0)
+                status = ethernet_link_setup ( (id == eLED_100M) ? LED_LINK_1G:LED_LINK_100M ) ? 1 : -1;
+            else
+                status = ethernet_link_setup ( (id == eLED_100M) ? LED_LINK_100M:LED_LINK_1G ) ? 1 : -1;
 
             DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F',
                                     (id == eLED_100M) ? "P1_6.5" : "P1_6.6");
