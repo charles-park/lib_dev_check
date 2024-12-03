@@ -51,7 +51,9 @@ struct device_usb {
 
 // default link speed, read/write (MB/s)
 #define DEFAULT_USB30_L 5000
-#define DEFAULT_USB30_R 100
+// USB 3.0 Memory stick : read speed 80MB/s
+// USB3.0 eMMC Reader + eMMC : read speed 130MB/s
+#define DEFAULT_USB30_R 80
 #define DEFAULT_USB30_W 35
 
 #define DEFAULT_USB20_L 480
