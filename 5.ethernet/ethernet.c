@@ -239,7 +239,7 @@ static int ethernet_ip_check (char action, char *resp)
 //------------------------------------------------------------------------------
 static int ethernet_mac_write (const char *model)
 {
-    char efuse [EFUSE_SIZE_M1S];
+    char efuse [EFUSE_UUID_SIZE];
 
     memset (efuse, 0, sizeof (efuse));
 
@@ -444,7 +444,7 @@ static void default_config_read (void)
 //------------------------------------------------------------------------------
 int ethernet_grp_init (void)
 {
-    char efuse [EFUSE_SIZE_M1S];
+    char efuse [EFUSE_UUID_SIZE];
 
     memset (efuse, 0, sizeof (efuse));
 
