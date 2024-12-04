@@ -220,6 +220,9 @@ int storage_check (int dev_id, char *resp)
 
                 status = (value > DeviceSTORAGE[id].w_min) ? 1 : -1;
             } else {
+                if (DeviceSTORAGE[id].value <= DeviceSTORAGE[id].r_min)
+                    DeviceSTORAGE[id].value = storage_rw(DeviceSTORAGE[id].path, STORAGE_R_CHECK);
+
                 value  = DeviceSTORAGE[id].value;
                 status = (value > DeviceSTORAGE[id].r_min) ? 1 : -1;
                 if (pthreadEnable && (status < 0))

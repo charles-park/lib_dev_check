@@ -53,7 +53,7 @@ struct device_usb {
 #define DEFAULT_USB30_L 5000
 // USB 3.0 Memory stick : read speed 80MB/s
 // USB3.0 eMMC Reader + eMMC : read speed 130MB/s
-#define DEFAULT_USB30_R 80
+#define DEFAULT_USB30_R 70
 #define DEFAULT_USB30_W 35
 
 #define DEFAULT_USB20_L 480
@@ -242,8 +242,12 @@ int usb_check (int dev_id, char *resp)
                 value  = usb_speed (DeviceUSB[id].path);
                 status = (value == DeviceUSB[id].speed) ? 1 : -1;
             } else {
-                value  =  DeviceUSB[id].value;
+                if (DeviceUSB[id].value <= DeviceUSB[id].r_min)
+                    DeviceUSB[id].value = usb_rw (DeviceUSB[id].path, USB_R_CHECK);
+
+                value  = DeviceUSB[id].value;
                 status = (value > DeviceUSB[id].r_min) ? 1 : -1;
+
                 if (pthreadEnable && (status < 0))
                     status = 0;
             }

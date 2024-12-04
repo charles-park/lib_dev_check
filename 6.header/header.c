@@ -155,7 +155,6 @@ int header_check (int dev_id, char *resp)
     int status = 0, id = DEVICE_ID(dev_id);
 
     status = pattern_write (id, DEVICE_ACTION(dev_id)) ? 1 : -1;
-//    value  = DEVICE_ACTION(dev_id);
     switch (id) {
         case eHEADER_40:
             DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', "CON1");
@@ -169,7 +168,6 @@ int header_check (int dev_id, char *resp)
         default :
             break;
     }
-//    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'C' : 'F', value);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;
 }

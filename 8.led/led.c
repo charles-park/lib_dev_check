@@ -146,14 +146,14 @@ int led_data_check (int dev_id, int resp_i)
     int status = 0, id = DEVICE_ID(dev_id);
     switch (id) {
         case eLED_100M: case eLED_1G:
-                status = (resp_i > 400) ? 1 : 0;    // led on
+                status = (resp_i > 300) ? 1 : 0;    // led on
             break;
         case eLED_ALIVE: case eLED_POWER:
             if (DEVICE_ACTION(dev_id))
                 // adc value
-                status = (resp_i > 700) ? 1 : 0;    // led on
+                status = (resp_i > 600) ? 1 : 0;    // led on
             else
-                status = (resp_i < 400) ? 1 : 0;    // led off
+                status = (resp_i < 500) ? 1 : 0;    // led off
 
             break;
     }
