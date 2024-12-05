@@ -87,12 +87,20 @@ int device_resp_parse (const char *resp_msg, parse_resp_data_t *pdata)
 //------------------------------------------------------------------------------
 int device_resp_check (parse_resp_data_t *pdata)
 {
+    char resp [DEVICE_RESP_SIZE+1];
+    memset (resp, 0, sizeof(resp));
+
     switch (pdata->gid) {
         /* IR Thread running */
         case eGID_IR:
-            return 0;
+            pdata->status_i = ir_check (pdata->did, resp);
+            return pdata->status_i;
+
          case eGID_ETHERNET:
-            if (pdata->did == eETHERNET_IPERF)  return 0;
+            if (pdata->did == eETHERNET_IPERF)  {
+                pdata->status_i = ethernet_check (pdata->did, resp);
+                return pdata->status_i;
+            }
             break;
         case eGID_LED:
             pdata->status_i = led_data_check (pdata->did, pdata->resp_i);
