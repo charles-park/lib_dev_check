@@ -139,12 +139,12 @@ static void ip_str_to_int (char *ip_str, int *ip_int)
 //------------------------------------------------------------------------------
 static int ethernet_board_ip (void)
 {
-    int fd, retry_cnt = 10;
+    int fd, retry_cnt = 100;
     struct ifreq ifr;
     char ip_addr[sizeof(struct sockaddr)+1];
 
 retry:
-    usleep (500 * 1000);    // 500ms delay
+    usleep (100 * 1000);    // 500ms delay
     /* this entire function is almost copied from ethtool source code */
     /* Open control socket. */
     if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
@@ -308,17 +308,17 @@ static void ethernet_efuse_check (void)
             }
         }
 
-        if (DeviceETHERNET.board_mac_validate) {
-            efuse_get_mac (efuse, DeviceETHERNET.board_mac);
-            sprintf (DeviceETHERNET.board_mac_str, "%c%c:%c%c:%c%c:%c%c:%c%c:%c%c",
-                DeviceETHERNET.board_mac[0], DeviceETHERNET.board_mac[1],
-                DeviceETHERNET.board_mac[2], DeviceETHERNET.board_mac[3],
-                DeviceETHERNET.board_mac[4], DeviceETHERNET.board_mac[5],
-                DeviceETHERNET.board_mac[6], DeviceETHERNET.board_mac[7],
-                DeviceETHERNET.board_mac[8], DeviceETHERNET.board_mac[9],
-                DeviceETHERNET.board_mac[10], DeviceETHERNET.board_mac[11]);
+        efuse_get_mac (efuse, DeviceETHERNET.board_mac);
+        sprintf (DeviceETHERNET.board_mac_str, "%c%c:%c%c:%c%c:%c%c:%c%c:%c%c",
+            DeviceETHERNET.board_mac[0], DeviceETHERNET.board_mac[1],
+            DeviceETHERNET.board_mac[2], DeviceETHERNET.board_mac[3],
+            DeviceETHERNET.board_mac[4], DeviceETHERNET.board_mac[5],
+            DeviceETHERNET.board_mac[6], DeviceETHERNET.board_mac[7],
+            DeviceETHERNET.board_mac[8], DeviceETHERNET.board_mac[9],
+            DeviceETHERNET.board_mac[10], DeviceETHERNET.board_mac[11]);
+
+        if (DeviceETHERNET.board_mac_validate)
             printf ("%s : mac address = %s\n", __func__, DeviceETHERNET.board_mac_str);
-        }
         else
             printf ("%s : ethernet mac write error! (%s)\n", __func__, EFUSE_MODEL_NAME);
     }
