@@ -78,16 +78,7 @@ const int HEADER40[] = {
 
 //------------------------------------------------------------------------------
 const int HEADER7_PATTERN[PATTERN_COUNT][sizeof(HEADER7)/sizeof(HEADER7[0])] = {
-    // Pattern 0 : ALL High
-    {
-        // Header J7 GPIOs
-        NC,        // Not used (pin 0)
-        NC,  NC,   // | 01 : GND       || 02 : SPDIF OUT |
-        NC,   1,   // | 03 : 5.0V      || 04 : I2S_MCLK  |
-         1,   1,   // | 05 : I2S LRCLK || 06 : I2S_SCLK  |
-         1,        // | 07 : I2S_DATA  |
-    },
-    // Pattern 1 : ALL Low
+    // Pattern 0 : ALL Low
     {
         // Header J7 GPIOs
         NC,        // Not used (pin 0)
@@ -95,6 +86,15 @@ const int HEADER7_PATTERN[PATTERN_COUNT][sizeof(HEADER7)/sizeof(HEADER7[0])] = {
         NC,   0,   // | 03 : 5.0V      || 04 : I2S_MCLK  |
          0,   0,   // | 05 : I2S LRCLK || 06 : I2S_SCLK  |
          0,        // | 07 : I2S_DATA  |
+    },
+    // Pattern 1 : ALL High
+    {
+        // Header J7 GPIOs
+        NC,        // Not used (pin 0)
+        NC,  NC,   // | 01 : GND       || 02 : SPDIF OUT |
+        NC,   1,   // | 03 : 5.0V      || 04 : I2S_MCLK  |
+         1,   1,   // | 05 : I2S LRCLK || 06 : I2S_SCLK  |
+         1,        // | 07 : I2S_DATA  |
     },
     // Pattern 2 : Cross 0
     {
@@ -117,7 +117,7 @@ const int HEADER7_PATTERN[PATTERN_COUNT][sizeof(HEADER7)/sizeof(HEADER7[0])] = {
 };
 
 const int HEADER14_PATTERN[PATTERN_COUNT][sizeof(HEADER14)/sizeof(HEADER14[0])] = {
-    // Pattern 0 : ALL High
+    // Pattern 0 : ALL Low
     {
         NC,        // Not used (pin 0)
         NC,  NC,
@@ -128,7 +128,7 @@ const int HEADER14_PATTERN[PATTERN_COUNT][sizeof(HEADER14)/sizeof(HEADER14[0])] 
         NC,  NC,
         NC,  NC,
     },
-    // Pattern 1 : ALL Low
+    // Pattern 1 : ALL High
     {
         NC,        // Not used (pin 0)
         NC,  NC,
@@ -164,32 +164,7 @@ const int HEADER14_PATTERN[PATTERN_COUNT][sizeof(HEADER14)/sizeof(HEADER14[0])] 
 };
 
 const int HEADER40_PATTERN[PATTERN_COUNT][sizeof(HEADER40)/sizeof(HEADER40[0])] = {
-    // Pattern 0 : ALL High
-    {
-        // Header J4 GPIOs
-        NC,        // Not used (pin 0)
-        NC, NC,   // | 01 : 3.3V     || 02 : 5.0V     |
-         1, NC,   // | 03 : I2C_SDA1 || 04 : 5.0V     |
-         1, NC,   // | 05 : I2C_SCL1 || 06 : GND      |
-         1,  1,   // | 07 : GPIO0_B6 || 08 : GPIO2_A4 |
-        NC,  1,   // | 09 : GND      || 10 : GPIO2_A3 |
-         1,  1,   // | 11 : GPIO0_C0 || 12 : GPIO2_A7 |
-         1, NC,   // | 13 : GPIO0_C1 || 14 : GND      |
-         1,  1,   // | 15 : GPIO0_C2 || 16 : GPIO2_B5 |
-        NC,  1,   // | 17 : 3.3V     || 18 : GPIO3_B6 |
-         1, NC,   // | 19 : GPIO3_C1 || 20 : GND      |
-         1,  1,   // | 21 : GPIO3_C2 || 22 : GPIO2_B0 |
-         1,  1,   // | 23 : GPIO3_C3 || 24 : GPIO3_A1 |
-        NC,  1,   // | 25 : GND      || 26 : GPIO2_B1 |
-         1,  1,   // | 27 : GPIO0_B4 || 28 : GPIO2_B3 |
-         1, NC,   // | 29 : GPIO2_C0 || 30 : GND      |
-         1,  1,   // | 31 : GPIO2_B7 || 32 : GPIO2_B2 |
-         1, NC,   // | 33 : GPIO0_B5 || 34 : GND      |
-         1,  1,   // | 35 : GPIO0_A5 || 36 : GPIO2_A6 |
-        NC, NC,   // | 37 : ADC.AIN1 || 38 : 1.8V     |
-        NC, NC,   // | 39 : PWRBTN   || 40 : ADC.AIN0 |
-    },
-    // Pattern 1 : ALL Low
+    // Pattern 0 : ALL Low
     {
         // Header J4 GPIOs
         NC,        // Not used (pin 0)
@@ -214,53 +189,78 @@ const int HEADER40_PATTERN[PATTERN_COUNT][sizeof(HEADER40)/sizeof(HEADER40[0])] 
         NC, NC,   // | 37 : ADC.AIN1 || 38 : 1.8V     |
         NC, NC,   // | 39 : PWRBTN   || 40 : ADC.AIN0 |
     },
-    // Pattern 2 : Cross 0
+    // Pattern 1 : Left pin 1 (1,3,5...39)
+    {
+        // Header J4 GPIOs
+        NC,       // Not used (pin 0)
+        NC, NC,   // | 01 : 3.3V     || 02 : 5.0V     |
+         1, NC,   // | 03 : I2C_SDA1 || 04 : 5.0V     |
+         1, NC,   // | 05 : I2C_SCL1 || 06 : GND      |
+         1,  0,   // | 07 : GPIO0_B6 || 08 : GPIO2_A4 |
+        NC,  0,   // | 09 : GND      || 10 : GPIO2_A3 |
+         1,  0,   // | 11 : GPIO0_C0 || 12 : GPIO2_A7 |
+         1, NC,   // | 13 : GPIO0_C1 || 14 : GND      |
+         1,  0,   // | 15 : GPIO0_C2 || 16 : GPIO2_B5 |
+        NC,  0,   // | 17 : 3.3V     || 18 : GPIO3_B6 |
+         1, NC,   // | 19 : GPIO3_C1 || 20 : GND      |
+         1,  0,   // | 21 : GPIO3_C2 || 22 : GPIO2_B0 |
+         1,  0,   // | 23 : GPIO3_C3 || 24 : GPIO3_A1 |
+        NC,  0,   // | 25 : GND      || 26 : GPIO2_B1 |
+         1,  0,   // | 27 : GPIO0_B4 || 28 : GPIO2_B3 |
+         1, NC,   // | 29 : GPIO2_C0 || 30 : GND      |
+         1,  0,   // | 31 : GPIO2_B7 || 32 : GPIO2_B2 |
+         1, NC,   // | 33 : GPIO0_B5 || 34 : GND      |
+         1,  0,   // | 35 : GPIO0_A5 || 36 : GPIO2_A6 |
+        NC, NC,   // | 37 : ADC.AIN1 || 38 : 1.8V     |
+        NC, NC,   // | 39 : PWRBTN   || 40 : ADC.AIN0 |
+    },
+    // Pattern 2 : Right pin 1 (2,4,6...40)
     {
         // Header J4 GPIOs
         NC,        // Not used (pin 0)
         NC, NC,   // | 01 : 3.3V     || 02 : 5.0V     |
          0, NC,   // | 03 : I2C_SDA1 || 04 : 5.0V     |
-         1, NC,   // | 05 : I2C_SCL1 || 06 : GND      |
+         0, NC,   // | 05 : I2C_SCL1 || 06 : GND      |
          0,  1,   // | 07 : GPIO0_B6 || 08 : GPIO2_A4 |
-        NC,  0,   // | 09 : GND      || 10 : GPIO2_A3 |
+        NC,  1,   // | 09 : GND      || 10 : GPIO2_A3 |
          0,  1,   // | 11 : GPIO0_C0 || 12 : GPIO2_A7 |
-         1, NC,   // | 13 : GPIO0_C1 || 14 : GND      |
+         0, NC,   // | 13 : GPIO0_C1 || 14 : GND      |
          0,  1,   // | 15 : GPIO0_C2 || 16 : GPIO2_B5 |
-        NC,  0,   // | 17 : 3.3V     || 18 : GPIO3_B6 |
-         1, NC,   // | 19 : GPIO3_C1 || 20 : GND      |
+        NC,  1,   // | 17 : 3.3V     || 18 : GPIO3_B6 |
+         0, NC,   // | 19 : GPIO3_C1 || 20 : GND      |
          0,  1,   // | 21 : GPIO3_C2 || 22 : GPIO2_B0 |
-         1,  0,   // | 23 : GPIO3_C3 || 24 : GPIO3_A1 |
+         0,  1,   // | 23 : GPIO3_C3 || 24 : GPIO3_A1 |
         NC,  1,   // | 25 : GND      || 26 : GPIO2_B1 |
-         1,  0,   // | 27 : GPIO0_B4 || 28 : GPIO2_B3 |
+         0,  1,   // | 27 : GPIO0_B4 || 28 : GPIO2_B3 |
          0, NC,   // | 29 : GPIO2_C0 || 30 : GND      |
-         1,  0,   // | 31 : GPIO2_B7 || 32 : GPIO2_B2 |
+         0,  1,   // | 31 : GPIO2_B7 || 32 : GPIO2_B2 |
          0, NC,   // | 33 : GPIO0_B5 || 34 : GND      |
-         1,  0,   // | 35 : GPIO0_A5 || 36 : GPIO2_A6 |
+         0,  1,   // | 35 : GPIO0_A5 || 36 : GPIO2_A6 |
         NC, NC,   // | 37 : ADC.AIN1 || 38 : 1.8V     |
         NC, NC,   // | 39 : PWRBTN   || 40 : ADC.AIN0 |
     },
-    // Pattern 3 : Cross 1
+    // Pattern 1 : ALL High
     {
         // Header J4 GPIOs
         NC,        // Not used (pin 0)
         NC, NC,   // | 01 : 3.3V     || 02 : 5.0V     |
          1, NC,   // | 03 : I2C_SDA1 || 04 : 5.0V     |
-         0, NC,   // | 05 : I2C_SCL1 || 06 : GND      |
-         1,  0,   // | 07 : GPIO0_B6 || 08 : GPIO2_A4 |
+         1, NC,   // | 05 : I2C_SCL1 || 06 : GND      |
+         1,  1,   // | 07 : GPIO0_B6 || 08 : GPIO2_A4 |
         NC,  1,   // | 09 : GND      || 10 : GPIO2_A3 |
-         1,  0,   // | 11 : GPIO0_C0 || 12 : GPIO2_A7 |
-         0, NC,   // | 13 : GPIO0_C1 || 14 : GND      |
-         1,  0,   // | 15 : GPIO0_C2 || 16 : GPIO2_B5 |
+         1,  1,   // | 11 : GPIO0_C0 || 12 : GPIO2_A7 |
+         1, NC,   // | 13 : GPIO0_C1 || 14 : GND      |
+         1,  1,   // | 15 : GPIO0_C2 || 16 : GPIO2_B5 |
         NC,  1,   // | 17 : 3.3V     || 18 : GPIO3_B6 |
-         0, NC,   // | 19 : GPIO3_C1 || 20 : GND      |
-         1,  0,   // | 21 : GPIO3_C2 || 22 : GPIO2_B0 |
-         0,  1,   // | 23 : GPIO3_C3 || 24 : GPIO3_A1 |
-        NC,  0,   // | 25 : GND      || 26 : GPIO2_B1 |
-         0,  1,   // | 27 : GPIO0_B4 || 28 : GPIO2_B3 |
+         1, NC,   // | 19 : GPIO3_C1 || 20 : GND      |
+         1,  1,   // | 21 : GPIO3_C2 || 22 : GPIO2_B0 |
+         1,  1,   // | 23 : GPIO3_C3 || 24 : GPIO3_A1 |
+        NC,  1,   // | 25 : GND      || 26 : GPIO2_B1 |
+         1,  1,   // | 27 : GPIO0_B4 || 28 : GPIO2_B3 |
          1, NC,   // | 29 : GPIO2_C0 || 30 : GND      |
-         0,  1,   // | 31 : GPIO2_B7 || 32 : GPIO2_B2 |
+         1,  1,   // | 31 : GPIO2_B7 || 32 : GPIO2_B2 |
          1, NC,   // | 33 : GPIO0_B5 || 34 : GND      |
-         0,  1,   // | 35 : GPIO0_A5 || 36 : GPIO2_A6 |
+         1,  1,   // | 35 : GPIO0_A5 || 36 : GPIO2_A6 |
         NC, NC,   // | 37 : ADC.AIN1 || 38 : 1.8V     |
         NC, NC,   // | 39 : PWRBTN   || 40 : ADC.AIN0 |
     },
