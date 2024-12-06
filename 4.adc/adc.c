@@ -56,11 +56,11 @@ struct device_adc {
 
 // const 1.358V
 #define DEFAULT_ADC_H37_H   1400
-#define DEFAULT_ADC_H37_L   1340
+#define DEFAULT_ADC_H37_L   1330
 
 // const 0.441V
 #define DEFAULT_ADC_H40_H   490
-#define DEFAULT_ADC_H40_L   430
+#define DEFAULT_ADC_H40_L   410
 
 //------------------------------------------------------------------------------
 //
