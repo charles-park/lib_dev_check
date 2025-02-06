@@ -90,8 +90,8 @@ struct device_ethernet {
 */
 #define DEFAULT_SERVER_PORT     8888
 
-#define EFUSE_BOARD_ID          eBOARD_ID_C4
-#define EFUSE_MODEL_NAME        "c4"
+#define EFUSE_BOARD_ID          eBOARD_ID_C5
+#define EFUSE_MODEL_NAME        "c5"
 
 //------------------------------------------------------------------------------
 //
