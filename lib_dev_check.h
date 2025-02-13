@@ -32,6 +32,7 @@
 
 //------------------------------------------------------------------------------
 #define CONFIG_FILE_PATH    "/boot/"
+#define CONFIG_FILE_NAME    "dev_check.cfg"
 
 //------------------------------------------------------------------------------
 #define STR_PATH_LENGTH     128
@@ -119,7 +120,7 @@ extern int  device_resp_parse   (const char *resp, parse_resp_data_t *pdata);
 extern int  device_resp_check   (parse_resp_data_t *pdata);
 //------------------------------------------------------------------------------
 extern int  device_check        (int gid, int did, char *resp);
-extern int  device_setup        (void);
+extern int  device_init         (void);
 
 //------------------------------------------------------------------------------
 #endif  // __LIB_DEV_TEST_H__

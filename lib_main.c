@@ -300,7 +300,7 @@ int main (int argc, char *argv[])
     if (argc < 7)
         print_usage(argv[0]);
 
-    device_setup ();
+    device_init ();
     {
         int ret, did = OPT_DEVICE_ID + (OPT_ACTION * 10);
         char dev_resp [DEVICE_RESP_SIZE];

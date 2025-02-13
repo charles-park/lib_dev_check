@@ -34,6 +34,42 @@
 #include "lib_dev_check.h"
 
 //------------------------------------------------------------------------------
+// return 1 : find success, 0 : not found
+//------------------------------------------------------------------------------
+int find_file_path (const char *fname, char *file_path)
+{
+    FILE *fp;
+    char cmd_line[STR_PATH_LENGTH * 2];
+
+    memset (cmd_line, 0, sizeof(cmd_line));
+    sprintf(cmd_line, "%s\n", "pwd");
+
+    if (NULL != (fp = popen(cmd_line, "r"))) {
+        memset (cmd_line, 0, sizeof(cmd_line));
+        fgets  (cmd_line, STR_PATH_LENGTH, fp);
+        pclose (fp);
+
+        strncpy (file_path, cmd_line, strlen(cmd_line)-1);
+
+        memset (cmd_line, 0, sizeof(cmd_line));
+        sprintf(cmd_line, "find -name %s\n", fname);
+        if (NULL != (fp = popen(cmd_line, "r"))) {
+            memset (cmd_line, 0, sizeof(cmd_line));
+            fgets  (cmd_line, STR_PATH_LENGTH, fp);
+            pclose (fp);
+            if (strlen(cmd_line)) {
+                strncpy (&file_path[strlen(file_path)], &cmd_line[1], strlen(cmd_line)-1);
+                file_path[strlen(file_path)-1] = 0;
+                return 1;
+            }
+            return 0;
+        }
+    }
+    pclose(fp);
+    return 0;
+}
+
+//------------------------------------------------------------------------------
 int device_resp_parse (const char *resp_msg, parse_resp_data_t *pdata)
 {
     int msg_size = (int)strlen(resp_msg);
@@ -154,15 +190,107 @@ int device_check (int gid, int did, char *dev_resp)
 }
 
 //------------------------------------------------------------------------------
-int device_setup (void)
+#if 0
+ui_grp_t *ui_init (fb_info_t *fb, const char *cfg_filename)
 {
+    ui_grp_t *ui_grp;
+    FILE *pfd;
+    char buf[256], is_cfg_file = 0;
+
+    if ((pfd = fopen(cfg_filename, "r")) == NULL)
+        return   NULL;
+
+    if ((ui_grp = (ui_grp_t *)malloc(sizeof(ui_grp_t))) == NULL)
+        return   NULL;
+
+    memset (ui_grp, 0x00, sizeof(ui_grp_t));
+    memset (buf,    0x00, sizeof(buf));
+
+    while(fgets(buf, sizeof(buf), pfd) != NULL) {
+        if (!is_cfg_file) {
+            is_cfg_file = strncmp ("ODROID-UI-CONFIG", buf, strlen(buf)-1) == 0 ? 1 : 0;
+            memset (buf, 0x00, sizeof(buf));
+            continue;
+        }
+        switch(buf[0]) {
+            case  'C':  _ui_parser_cmd_C (buf, fb, ui_grp); break;
+            case  'B':  _ui_parser_cmd_B (buf, fb, ui_grp); break;
+            case  'I':  _ui_parser_cmd_I (buf, ui_grp);     break;
+            case  'T':  _ui_parser_cmd_T (buf, ui_grp);     break;
+            case  'R':  _ui_parser_cmd_R (buf, fb, ui_grp); break;
+            case  'S':  _ui_parser_cmd_S (buf, ui_grp);     break;
+            default :
+                fprintf(stdout, "ERROR: Unknown parser command! cmd = %c\n", buf[0]);
+            case  '#':  case  '\n':
+                break;
+        }
+        memset (buf, 0x00, sizeof(buf));
+    }
+
+    if (!is_cfg_file) {
+        fprintf(stdout, "ERROR: UI Config File not found! (filename = %s)\n", cfg_filename);
+        free (ui_grp);
+        return NULL;
+    }
+
+    /* all item update */
+    if (ui_grp->b_item_cnt)
+        ui_update (fb, ui_grp, -1);
+
+    // cfg file close
+    if (pfd)
+        fclose (pfd);
+
+    // file parser
+    return   ui_grp;
+}
+#endif
+
+//------------------------------------------------------------------------------
+static int device_setup (void)
+{
+    FILE *pfd;
+    char buf[STR_PATH_LENGTH] = {0,}, *ptr;
+
+    memset (buf, 0, sizeof(buf));
+    if (!find_file_path (CONFIG_FILE_NAME, buf)) {
+        printf ("%s : %s file not found!\n", __func__, CONFIG_FILE_NAME);
+        return 0;
+    }
+
+    if ((pfd = fopen(buf, "r")) == NULL) {
+        printf ("%s : %s file open error!\n", __func__, buf);
+        return 0;
+    }
+
+    while (fgets(buf, sizeof(buf), pfd) != NULL) {
+
+        if (buf[0] == '#' || buf[0] == '\n')  continue;
+
+//        printf ("%s : buf = %s\n", __func__, buf);
+        if ((ptr = strstr (buf, "SYSTEM"))    != NULL)  system_grp_init (buf);
+        if ((ptr = strstr (buf, "STORAGE"))   != NULL)  storage_grp_init (buf);
+
+        if ((ptr = strstr (buf, "USB"))   != NULL)
+        {
+            printf ("%s : %s line -> %s\n", __func__, ptr, buf);
+        }
+    }
+    fclose (pfd);
+    return 1;
+}
+
+//------------------------------------------------------------------------------
+int device_init (void)
+{
+    #if 0
+    system_grp_init ();
     // usb f/w upgrade check
     fw_grp_init();
     // iperf, ip, mac, check
     ethernet_grp_init ();
 
     // sysfile read
-    system_grp_init ();
     hdmi_grp_init ();
     adc_grp_init ();
 
@@ -181,8 +309,9 @@ int device_setup (void)
     led_grp_init ();
     // gpio number test
     gpio_grp_init ();
+#endif
 
-    return 1;
+    return device_setup ();
 }
 
 //------------------------------------------------------------------------------
