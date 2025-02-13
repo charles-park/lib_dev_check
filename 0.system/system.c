@@ -118,35 +118,34 @@ int system_check (int dev_id, char *resp)
 {
     int value = 0, status = 0, id = DEVICE_ID(dev_id);
 
-    if (!DeviceSYSTEM.init) goto out;
-
-    switch (id) {
-        case eSYSTEM_MEM:
-            value  = get_memory_size();
-            if (DeviceSYSTEM.mem_size)
-                status = (DeviceSYSTEM.mem_size == value) ? 1 : -1;
-            else
-                status = value ? 1 : -1;
-            break;
-        case eSYSTEM_FB_X:
-            value  = get_fb_size (DeviceSYSTEM.fb_path, id);
-            status = (value == DeviceSYSTEM.res_x) ? 1 : -1;
-            break;
-        case eSYSTEM_FB_Y:
-            value = get_fb_size (DeviceSYSTEM.fb_path, id);
-            status = (value == DeviceSYSTEM.res_y) ? 1 : -1;
-            break;
-        case eSYSTEM_FB_SIZE:
-            if ((get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_X) == DeviceSYSTEM.res_x) &&
-                (get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_Y) == DeviceSYSTEM.res_y))
-                status = 1;
-            else
-                value = -1;
-            break;
-        default :
-            break;
+    if (DeviceSYSTEM.init) {
+        switch (id) {
+            case eSYSTEM_MEM:
+                value  = get_memory_size();
+                if (DeviceSYSTEM.mem_size)
+                    status = (DeviceSYSTEM.mem_size == value) ? 1 : -1;
+                else
+                    status = value ? 1 : -1;
+                break;
+            case eSYSTEM_FB_X:
+                value  = get_fb_size (DeviceSYSTEM.fb_path, id);
+                status = (value == DeviceSYSTEM.res_x) ? 1 : -1;
+                break;
+            case eSYSTEM_FB_Y:
+                value = get_fb_size (DeviceSYSTEM.fb_path, id);
+                status = (value == DeviceSYSTEM.res_y) ? 1 : -1;
+                break;
+            case eSYSTEM_FB_SIZE:
+                if ((get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_X) == DeviceSYSTEM.res_x) &&
+                    (get_fb_size (DeviceSYSTEM.fb_path, eSYSTEM_FB_Y) == DeviceSYSTEM.res_y))
+                    status = 1;
+                else
+                    value = -1;
+                break;
+            default :
+                break;
+        }
     }
-out:
     DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;

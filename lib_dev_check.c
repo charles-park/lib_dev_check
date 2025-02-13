@@ -271,8 +271,9 @@ static int device_setup (void)
         if ((ptr = strstr (buf, "SYSTEM"))    != NULL)  system_grp_init (buf);
         if ((ptr = strstr (buf, "STORAGE"))   != NULL)  storage_grp_init (buf);
         if ((ptr = strstr (buf, "USB"))       != NULL)  usb_grp_init (buf);
+        if ((ptr = strstr (buf, "HDMI"))      != NULL)  hdmi_grp_init (buf);
 
-        if ((ptr = strstr (buf, "HDMI"))   != NULL)
+        if ((ptr = strstr (buf, "ADC"))   != NULL)
         {
             printf ("%s : %s line -> %s\n", __func__, ptr, buf);
         }

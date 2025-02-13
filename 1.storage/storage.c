@@ -142,8 +142,6 @@ static void *thread_func_storage (void *arg)
 
     p_storage->thread_en = 1;
     while (retry--) {
-        if (!p_storage->init)   break;
-
         pthread_mutex_lock(&mutex_storage);
 
         if (p_storage->rw_value[p_storage->rw] <= p_storage->rw_check[p_storage->rw])
@@ -166,27 +164,29 @@ int storage_check (int dev_id, char *resp)
     int value = 0, status = 0, id = DEVICE_ID(dev_id);
     struct device_storage *p_storage = &DeviceSTORAGE[id];
 
-    switch (id) {
-        case eSTORAGE_eMMC: case eSTORAGE_uSD:
-        case eSTORAGE_SATA: case eSTORAGE_NVME:
+    if (p_storage->init) {
+        switch (id) {
+            case eSTORAGE_eMMC: case eSTORAGE_uSD:
+            case eSTORAGE_SATA: case eSTORAGE_NVME:
 
-            do { usleep (100 * 1000); } while (p_storage->thread_en);
+                do { usleep (100 * 1000); } while (p_storage->thread_en);
 
-            p_storage->rw = DEVICE_ACTION(dev_id);
+                p_storage->rw = DEVICE_ACTION(dev_id);
 
-            pthread_create (&p_storage->thread, NULL,
-                                thread_func_storage, p_storage);
+                pthread_create (&p_storage->thread, NULL,
+                                    thread_func_storage, p_storage);
 
-            do { usleep (100 * 1000); } while (p_storage->thread_en);
+                do { usleep (100 * 1000); } while (p_storage->thread_en);
 
-            if (p_storage->rw && p_storage->boot_device)
-                remove_tmp (TEMP_FILE);
+                if (p_storage->rw && p_storage->boot_device)
+                    remove_tmp (TEMP_FILE);
 
-            value  = p_storage->rw_value[p_storage->rw];
-            status = (value > p_storage->rw_check[p_storage->rw]) ? 1 : -1;
-            break;
-        default :
-            break;
+                value  = p_storage->rw_value[p_storage->rw];
+                status = (value > p_storage->rw_check[p_storage->rw]) ? 1 : -1;
+                break;
+            default :
+                break;
+        }
     }
     DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);

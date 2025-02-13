@@ -164,8 +164,6 @@ void *thread_func_usb (void *arg)
 
     p_usb->thread_en = 1;
     while (retry--) {
-        if (!p_usb->init)   break;
-
         pthread_mutex_lock(&mutex_usb);
 
         if (p_usb->rw_value[p_usb->rw] <= p_usb->rw_check[p_usb->rw])
@@ -188,29 +186,31 @@ int usb_check (int dev_id, char *resp)
     int value = 0, status = 0, id = DEVICE_ID(dev_id);
     struct device_usb *p_usb = &DeviceUSB[id];
 
-    switch (id) {
-        case eUSB_0: case eUSB_1: case eUSB_2:
-        case eUSB_3: case eUSB_4: case eUSB_5:
+    if (p_usb->init) {
+        switch (id) {
+            case eUSB_0: case eUSB_1: case eUSB_2:
+            case eUSB_3: case eUSB_4: case eUSB_5:
 
-            if ((DEVICE_ACTION(dev_id) == 0) || (DEVICE_ACTION(dev_id) == 1)) {
-                do { usleep (100 * 1000); } while (p_usb->thread_en);
+                if ((DEVICE_ACTION(dev_id) == 0) || (DEVICE_ACTION(dev_id) == 1)) {
+                    do { usleep (100 * 1000); } while (p_usb->thread_en);
 
-                p_usb->rw = DEVICE_ACTION(dev_id);
+                    p_usb->rw = DEVICE_ACTION(dev_id);
 
-                pthread_create (&p_usb->thread, NULL,
-                                    thread_func_usb, p_usb);
+                    pthread_create (&p_usb->thread, NULL,
+                                        thread_func_usb, p_usb);
 
-                do { usleep (100 * 1000); } while (p_usb->thread_en);
+                    do { usleep (100 * 1000); } while (p_usb->thread_en);
 
-                value  = p_usb->rw_value[p_usb->rw];
-                status = (value > p_usb->rw_check[p_usb->rw]) ? 1 : -1;
-            } else {
-                value  = usb_speed (p_usb->path);
-                status = (value == p_usb->speed) ? 1 : -1;
-            }
-            break;
-        default :
-            break;
+                    value  = p_usb->rw_value[p_usb->rw];
+                    status = (value > p_usb->rw_check[p_usb->rw]) ? 1 : -1;
+                } else {
+                    value  = usb_speed (p_usb->path);
+                    status = (value == p_usb->speed) ? 1 : -1;
+                }
+                break;
+            default :
+                break;
+        }
     }
     DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
