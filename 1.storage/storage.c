@@ -142,7 +142,7 @@ static void *thread_func_storage (void *arg)
 
     p_storage->thread_en = 1;
     while (retry--) {
-        if (p_storage->path == NULL) break;
+        if (!p_storage->init)   break;
 
         pthread_mutex_lock(&mutex_storage);
 
