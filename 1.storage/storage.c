@@ -219,10 +219,12 @@ void storage_grp_init (char *cfg)
                     if ((tok = strtok (NULL, ",")) != NULL)
                         DeviceSTORAGE[did].boot_device = atoi(tok);
 
+#if 0
                     // read = 0(default), write = 1
                     DeviceSTORAGE[did].rw = 0;
                     pthread_create (&DeviceSTORAGE[did].thread, NULL,
                                     thread_func_storage, &DeviceSTORAGE[did]);
+#endif
                     break;
 
                 default :

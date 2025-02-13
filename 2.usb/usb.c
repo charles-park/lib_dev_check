@@ -243,10 +243,12 @@ void usb_grp_init (char *cfg)
                     if ((tok = strtok (NULL, ",")) != NULL)
                         DeviceUSB[did].speed = atoi(tok);
 
+#if 0
                     // read = 0(default), write = 1
                     DeviceUSB[did].rw = 0;
                     pthread_create (&DeviceUSB[did].thread, NULL,
                                     thread_func_usb, &DeviceUSB[did]);
+#endif
                     break;
 
                 default :
