@@ -36,15 +36,17 @@
 #include "../lib_dev_check.h"
 #include "../lib_gpio/lib_gpio.h"
 #include "header.h"
-#include "header_c4.h"
+//#include "header_c4.h"
 
 //------------------------------------------------------------------------------
+int HEADER40[40 +1] = { -1, }, HEADER14[14 +1] = { -1, }, HEADER7[7 +1] = { -1, };
+
 //------------------------------------------------------------------------------
 static int pattern_write (int id, int pattern)
 {
     int cnt = 0, err_cnt = 0, read = 0, nc_pin_cnt = 0;
     int gpio_cnt = 0, *gpio_pattern, *gpio_list;
-
+#if 0
     switch (id) {
         case eHEADER_7:
             gpio_cnt     = sizeof(HEADER7)/sizeof(HEADER7[0]);
@@ -65,6 +67,7 @@ static int pattern_write (int id, int pattern)
             printf ("%s : unknown header (id = %d)\n", __func__, id);
             return 0;
     }
+#endif
 
     for (cnt = 0; cnt < gpio_cnt; cnt++) {
         if (gpio_list[cnt] != NC) {
@@ -90,6 +93,7 @@ static int pattern_compare (int id, int pattern, int *resp_pt)
     int cnt = 0, err_cnt = 0, nc_pin_cnt = 0;
     int gpio_cnt = 0, *gpio_pattern, *gpio_list;
 
+#if 0
     switch (id) {
         case eHEADER_7:
             gpio_cnt     = sizeof(HEADER7)/sizeof(HEADER7[0]);
@@ -110,6 +114,7 @@ static int pattern_compare (int id, int pattern, int *resp_pt)
             printf ("%s : unknown header (id = %d)\n", __func__, id);
             return 0;
     }
+#endif
 
     for (cnt = 0; cnt < gpio_cnt; cnt++) {
         if (gpio_list[cnt] != NC) {
@@ -173,32 +178,31 @@ int header_check (int dev_id, char *resp)
 }
 
 //------------------------------------------------------------------------------
-int header_grp_init (void)
+void header_grp_init (char *cfg)
 {
-    int i;
+    char *tok;
+    int did, h_s, h_c, *h_a, i;
 
-    for (i = 0; i < (int)(sizeof(HEADER7)/sizeof(int)); i++) {
-        if (HEADER7[i] != NC) {
-            gpio_export    (HEADER7[i]);
-            gpio_direction (HEADER7[i], 1);
+    if ((tok = strtok (cfg, ",")) != NULL) {
+        if ((tok = strtok (NULL, ",")) != NULL)
+            did = atoi(tok);
+            if ((tok = strtok (NULL, ",")) != NULL) h_s = atoi (tok);
+            if ((tok = strtok (NULL, ",")) != NULL) h_c = atoi (tok);
+            switch (did) {
+                case eHEADER_40: h_a = &HEADER40[0]; break;
+                case eHEADER_14: h_a = &HEADER14[0]; break;
+                case eHEADER_7:  h_a = &HEADER7 [0]; break;
+                default :
+                    printf ("%s : error! unknown gid = %d\n", __func__, atoi(tok));
+                    return;
+            }
+    }
+    for (i = 0; i < h_c; i++) {
+        if ((tok = strtok (NULL, ",")) != NULL) h_a [h_s +i] = atoi (tok);
+        if (h_a[h_s +i] != NC) {
+            gpio_export    (h_a[h_s +i]);   gpio_direction (h_a[h_s +i], 1);
         }
     }
-
-    for (i = 0; i < (int)(sizeof(HEADER14)/sizeof(int)); i++) {
-        if (HEADER14[i] != NC) {
-            gpio_export    (HEADER14[i]);
-            gpio_direction (HEADER14[i], 1);
-        }
-    }
-
-    for (i = 0; i < (int)(sizeof(HEADER40)/sizeof(int)); i++) {
-        if (HEADER40[i] != NC) {
-            gpio_export    (HEADER40[i]);
-            gpio_direction (HEADER40 [i], 1);
-        }
-    }
-
-    return 1;
 }
 
 //------------------------------------------------------------------------------

@@ -34,9 +34,9 @@ enum {
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int header_data_check(int dev_id, char *resp_s);
-extern int header_check     (int dev_id, char *resp);
-extern int header_grp_init  (void);
+extern int  header_data_check   (int dev_id, char *resp_s);
+extern int  header_check        (int dev_id, char *resp);
+extern void header_grp_init     (char *cfg);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
