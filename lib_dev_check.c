@@ -274,7 +274,8 @@ static int device_setup (void)
         if ((ptr = strstr (buf, "HDMI"))      != NULL)  hdmi_grp_init (buf);
         if ((ptr = strstr (buf, "ADC"))       != NULL)  adc_grp_init (buf);
 
-        if ((ptr = strstr (buf, "ETHERNET"))   != NULL)
+        if ((ptr = strstr (buf, "ETHERNET"))   != NULL) ethernet_grp_init (buf);
+        if ((ptr = strstr (buf, "HEADER"))   != NULL)
         {
             printf ("%s : %s line -> %s\n", __func__, ptr, buf);
         }
