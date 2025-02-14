@@ -137,7 +137,7 @@ void adc_grp_init (char *cfg)
                         ResolutionADC = atoi(tok);
                     break;
                 default :
-                    printf ("%s : error! unknown gid = %d\n", __func__, atoi(tok));
+                    printf ("%s : error! unknown did = %d\n", __func__, did);
                     break;
             }
         }
