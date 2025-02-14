@@ -38,7 +38,6 @@
 
 //------------------------------------------------------------------------------
 struct device_adc {
-    int init;
     // Control path
     char path[STR_PATH_LENGTH +1];
     // compare value
@@ -54,9 +53,9 @@ struct device_adc {
 //------------------------------------------------------------------------------
 struct device_adc DeviceADC [eADC_END] = {
     // eADC_H37 (Header 37) - const 1.358V
-    { 0, {0, }, 0, 0 },
+    { {0, }, 0, 0 },
     // eADC_H40 (Header 40) - const 0.441V
-    { 0, {0, }, 0, 0 },
+    { {0, }, 0, 0 },
 };
 
 int ResolutionADC = 0, ReferenceADC = 0;
@@ -91,18 +90,16 @@ int adc_check (int dev_id, char *resp)
 {
     int value = 0, status = 0, id = DEVICE_ID(dev_id);
 
-    if (DeviceADC[id].init) {
-        switch (id) {
-            case eADC_H37: case eADC_H40:
-                value = adc_read (DeviceADC[id].path);
-                if ((value < DeviceADC[id].max) && (value > DeviceADC[id].min))
-                    status = 1;
-                else
-                    status = -1;
-                break;
-            default :
-                break;
-        }
+    switch (id) {
+        case eADC_H37: case eADC_H40:
+            value = adc_read (DeviceADC[id].path);
+            if ((value < DeviceADC[id].max) && (value > DeviceADC[id].min))
+                status = 1;
+            else
+                status = -1;
+            break;
+        default :
+            break;
     }
     DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
@@ -120,7 +117,6 @@ void adc_grp_init (char *cfg)
             did = atoi(tok);
             switch (did) {
                 case eADC_H37: case eADC_H40:
-                    DeviceADC[did].init = 1;
                     if ((tok = strtok (NULL, ",")) != NULL)
                         strncpy (DeviceADC[did].path, tok, strlen(tok));
 

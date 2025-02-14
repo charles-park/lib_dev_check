@@ -38,7 +38,6 @@
 
 //------------------------------------------------------------------------------
 struct device_usb {
-    int init;
     // Link speed
     int speed;
     // Control path
@@ -72,17 +71,17 @@ pthread_mutex_t mutex_usb = PTHREAD_MUTEX_INITIALIZER;
 struct device_usb DeviceUSB [eUSB_END] = {
     // init, speed, path, rw_check, rw_value, rw_mode, thread_en, pthread,
     // USB0-OTG
-    { 0, 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
     // USB1 - USB_L_DN
-    { 0, 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
     // USB2 - USB_L_UP
-    { 0, 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
     // USB3 - USB_R_DN
-    { 0, 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
     // USB4 - USB_R_UP
-    { 0, 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
     // USB5
-    { 0, 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
 };
 
 //------------------------------------------------------------------------------
@@ -186,31 +185,29 @@ int usb_check (int dev_id, char *resp)
     int value = 0, status = 0, id = DEVICE_ID(dev_id);
     struct device_usb *p_usb = &DeviceUSB[id];
 
-    if (p_usb->init) {
-        switch (id) {
-            case eUSB_0: case eUSB_1: case eUSB_2:
-            case eUSB_3: case eUSB_4: case eUSB_5:
+    switch (id) {
+        case eUSB_0: case eUSB_1: case eUSB_2:
+        case eUSB_3: case eUSB_4: case eUSB_5:
 
-                if ((DEVICE_ACTION(dev_id) == 0) || (DEVICE_ACTION(dev_id) == 1)) {
-                    do { usleep (100 * 1000); } while (p_usb->thread_en);
+            if ((DEVICE_ACTION(dev_id) == 0) || (DEVICE_ACTION(dev_id) == 1)) {
+                do { usleep (100 * 1000); } while (p_usb->thread_en);
 
-                    p_usb->rw = DEVICE_ACTION(dev_id);
+                p_usb->rw = DEVICE_ACTION(dev_id);
 
-                    pthread_create (&p_usb->thread, NULL,
-                                        thread_func_usb, p_usb);
+                pthread_create (&p_usb->thread, NULL,
+                                    thread_func_usb, p_usb);
 
-                    do { usleep (100 * 1000); } while (p_usb->thread_en);
+                do { usleep (100 * 1000); } while (p_usb->thread_en);
 
-                    value  = p_usb->rw_value[p_usb->rw];
-                    status = (value > p_usb->rw_check[p_usb->rw]) ? 1 : -1;
-                } else {
-                    value  = usb_speed (p_usb->path);
-                    status = (value == p_usb->speed) ? 1 : -1;
-                }
-                break;
-            default :
-                break;
-        }
+                value  = p_usb->rw_value[p_usb->rw];
+                status = (value > p_usb->rw_check[p_usb->rw]) ? 1 : -1;
+            } else {
+                value  = usb_speed (p_usb->path);
+                status = (value == p_usb->speed) ? 1 : -1;
+            }
+            break;
+        default :
+            break;
     }
     DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
@@ -229,8 +226,6 @@ void usb_grp_init (char *cfg)
             switch (did) {
                 case eUSB_0: case eUSB_1: case eUSB_2:
                 case eUSB_3: case eUSB_4: case eUSB_5:
-                    DeviceUSB[did].init = 1;
-
                     if ((tok = strtok (NULL, ",")) != NULL)
                         strncpy (DeviceUSB[did].path, tok, strlen(tok));
 
@@ -242,13 +237,6 @@ void usb_grp_init (char *cfg)
 
                     if ((tok = strtok (NULL, ",")) != NULL)
                         DeviceUSB[did].speed = atoi(tok);
-
-#if 0
-                    // read = 0(default), write = 1
-                    DeviceUSB[did].rw = 0;
-                    pthread_create (&DeviceUSB[did].thread, NULL,
-                                    thread_func_usb, &DeviceUSB[did]);
-#endif
                     break;
 
                 default :

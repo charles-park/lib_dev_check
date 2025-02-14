@@ -38,7 +38,6 @@
 
 //------------------------------------------------------------------------------
 struct device_hdmi {
-    int init;
     // Control path
     char path[STR_PATH_LENGTH +1];
     // compare value
@@ -56,8 +55,8 @@ struct device_hdmi {
 
 struct device_hdmi DeviceHDMI [eHDMI_END] = {
     // EDID
-    {0, {0,},{0,}},
-    {0, {0,},{0,}},
+    {{0,},{0,}},
+    {{0,},{0,}},
 };
 
 //------------------------------------------------------------------------------
@@ -99,17 +98,15 @@ int hdmi_check (int dev_id, char *resp)
 {
     int status = 0, id = DEVICE_ID(dev_id);
 
-    if (DeviceHDMI[id].init) {
-        switch (id) {
-            case eHDMI_EDID: case eHDMI_HPD:
-                if (hdmi_read (DeviceHDMI[id].path, resp))
-                    status = data_check (id, resp);
-                else
-                    status = -1;
-                break;
-            default :
-                break;
-        }
+    switch (id) {
+        case eHDMI_EDID: case eHDMI_HPD:
+            if (hdmi_read (DeviceHDMI[id].path, resp))
+                status = data_check (id, resp);
+            else
+                status = -1;
+            break;
+        default :
+            break;
     }
     if (status == 1)
         DEVICE_RESP_FORM_STR (resp, 'P', "PASS");
@@ -130,9 +127,7 @@ void hdmi_grp_init (char *cfg)
         if ((tok = strtok (NULL, ",")) != NULL) {
             did = atoi(tok);
             switch (did) {
-                case eHDMI_EDID:
-                case eHDMI_HPD:
-                    DeviceHDMI[did].init = 1;
+                case eHDMI_EDID: case eHDMI_HPD:
                     if ((tok = strtok (NULL, ",")) != NULL)
                         strncpy (DeviceHDMI[did].path, tok, strlen(tok));
                     if ((tok = strtok (NULL, ",")) != NULL)

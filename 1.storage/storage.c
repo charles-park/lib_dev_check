@@ -38,7 +38,7 @@
 
 //------------------------------------------------------------------------------
 struct device_storage {
-    int init, boot_device;
+    int boot_device;
 
     // Control path
     char path [STR_PATH_LENGTH +1];
@@ -67,13 +67,13 @@ pthread_mutex_t mutex_storage = PTHREAD_MUTEX_INITIALIZER;
 struct device_storage DeviceSTORAGE [eSTORAGE_END] = {
     // init, boot_device, path, rw_check, rw_value, rw_mode, thread_en, pthread,
     // eSTORAGE_EMMC
-    { 0, 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
     // eSTORAGE_uSD (boot device : /root)
-    { 0, 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
     // eSTORAGE_SATA
-    { 0, 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
     // eSTORAGE_NVME
-    { 0, 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
 };
 
 //------------------------------------------------------------------------------
@@ -164,29 +164,27 @@ int storage_check (int dev_id, char *resp)
     int value = 0, status = 0, id = DEVICE_ID(dev_id);
     struct device_storage *p_storage = &DeviceSTORAGE[id];
 
-    if (p_storage->init) {
-        switch (id) {
-            case eSTORAGE_eMMC: case eSTORAGE_uSD:
-            case eSTORAGE_SATA: case eSTORAGE_NVME:
+    switch (id) {
+        case eSTORAGE_eMMC: case eSTORAGE_uSD:
+        case eSTORAGE_SATA: case eSTORAGE_NVME:
 
-                do { usleep (100 * 1000); } while (p_storage->thread_en);
+            do { usleep (100 * 1000); } while (p_storage->thread_en);
 
-                p_storage->rw = DEVICE_ACTION(dev_id);
+            p_storage->rw = DEVICE_ACTION(dev_id);
 
-                pthread_create (&p_storage->thread, NULL,
-                                    thread_func_storage, p_storage);
+            pthread_create (&p_storage->thread, NULL,
+                                thread_func_storage, p_storage);
 
-                do { usleep (100 * 1000); } while (p_storage->thread_en);
+            do { usleep (100 * 1000); } while (p_storage->thread_en);
 
-                if (p_storage->rw && p_storage->boot_device)
-                    remove_tmp (TEMP_FILE);
+            if (p_storage->rw && p_storage->boot_device)
+                remove_tmp (TEMP_FILE);
 
-                value  = p_storage->rw_value[p_storage->rw];
-                status = (value > p_storage->rw_check[p_storage->rw]) ? 1 : -1;
-                break;
-            default :
-                break;
-        }
+            value  = p_storage->rw_value[p_storage->rw];
+            status = (value > p_storage->rw_check[p_storage->rw]) ? 1 : -1;
+            break;
+        default :
+            break;
     }
     DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
@@ -205,8 +203,6 @@ void storage_grp_init (char *cfg)
             switch (did) {
                 case eSTORAGE_eMMC: case eSTORAGE_uSD:
                 case eSTORAGE_SATA: case eSTORAGE_NVME:
-                    DeviceSTORAGE[did].init = 1;
-
                     if ((tok = strtok (NULL, ",")) != NULL)
                         strncpy (DeviceSTORAGE[did].path, tok, strlen(tok));
 
@@ -218,13 +214,6 @@ void storage_grp_init (char *cfg)
 
                     if ((tok = strtok (NULL, ",")) != NULL)
                         DeviceSTORAGE[did].boot_device = atoi(tok);
-
-#if 0
-                    // read = 0(default), write = 1
-                    DeviceSTORAGE[did].rw = 0;
-                    pthread_create (&DeviceSTORAGE[did].thread, NULL,
-                                    thread_func_storage, &DeviceSTORAGE[did]);
-#endif
                     break;
 
                 default :

@@ -51,15 +51,6 @@
 #define LINK_SPEED_1G       1000
 #define LINK_SPEED_100M     100
 
-/* iperf3_odroid 를 설치하여 사용함. socket통신을 통하여 iperf3 실행하도록 함. */
-/* iperf3_odroid build 후 iperf3_odroid실행파일은 /usr/bin으로 복사하여 사용함. */
-#if defined (__IPERF3_ODROID__)
-    #define IPERF3_RUN_CMD      "iperf3_odroid -R -p 8000 -c"
-#else
-    // #define IPERF3_RUN_CMD      "iperf3 -t 1 -c"
-    #define IPERF3_RUN_CMD      "iperf3 -t 1 -R -c"
-#endif
-
 //------------------------------------------------------------------------------
 //
 // Configuration
@@ -69,37 +60,36 @@ struct device_ethernet {
     char board_ip_str [sizeof(struct sockaddr)+1];
     int  board_ip_int [4];   // aaa.bbb.ccc.ddd
 
-    char server_ip_str [sizeof(struct sockaddr)+1];
-    int  server_ip_int [4];   // aaa.bbb.ccc.ddd
-
-    int  board_mac_validate;
-    char board_mac_str[20];
-    char board_mac[MAC_STR_SIZE +1];
-
-    int iperf_speed;
-    int iperf_check_speed;
-};
-
-#define DEFAULT_IPERF_SPEED     800
 /*
-    2024 New Server Port
+    New nlp-server port
     ODROID-C4  : 8888
     ODROID-M1  : 9000
     ODROID-M1S : 9001
     ODROID-M2  : 9002
     ODROID-C5  : 9003
 */
-#define DEFAULT_SERVER_PORT     8888
+    char server_ip_str [sizeof(struct sockaddr)+1];
+    int  server_ip_int [4];   // aaa.bbb.ccc.ddd
+    int  server_port;
 
-#define EFUSE_BOARD_ID          eBOARD_ID_C5
-#define EFUSE_MODEL_NAME        "c5"
+    char efuse_board_name[16];
+    int  board_mac_validate;
+    char board_mac_str[20];
+    char board_mac[MAC_STR_SIZE +1];
+
+    int link_speed;
+    int iperf_speed;
+    int iperf_check_speed;
+};
 
 //------------------------------------------------------------------------------
 //
 // Configuration
 //
 //------------------------------------------------------------------------------
-struct device_ethernet DeviceETHERNET;
+struct device_ethernet DeviceETHERNET = {
+    {0, }, {0, }, {0, }, {0, }, 0, {0, }, 0, {0, }, {0, }, 0, 0, 0
+};
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -236,7 +226,7 @@ static int ethernet_server_ip (void)
         DeviceETHERNET.board_ip_int[0],
         DeviceETHERNET.board_ip_int[1],
         DeviceETHERNET.board_ip_int[2],
-        DEFAULT_SERVER_PORT);
+        DeviceETHERNET.server_port);
 
     if ((fp = popen(cmd_line, "r")) != NULL) {
         memset(cmd_line, 0, sizeof(cmd_line));
@@ -296,13 +286,13 @@ static void ethernet_efuse_check (void)
 
     memset (efuse, 0, sizeof (efuse));
 
-    efuse_set_board (EFUSE_BOARD_ID);
+    efuse_set_board_str (DeviceETHERNET.efuse_board_name);
 
     // mac status & value
     if (efuse_control (efuse, EFUSE_READ)) {
         DeviceETHERNET.board_mac_validate = efuse_valid_check (efuse);
         if (!DeviceETHERNET.board_mac_validate) {
-            if (ethernet_mac_write (EFUSE_MODEL_NAME)) {
+            if (ethernet_mac_write (DeviceETHERNET.efuse_board_name)) {
                 memset (efuse, 0, sizeof (efuse));
                 efuse_control (efuse, EFUSE_READ);
                 DeviceETHERNET.board_mac_validate = efuse_valid_check (efuse);
@@ -321,7 +311,7 @@ static void ethernet_efuse_check (void)
         if (DeviceETHERNET.board_mac_validate)
             printf ("%s : mac address = %s\n", __func__, DeviceETHERNET.board_mac_str);
         else
-            printf ("%s : ethernet mac write error! (%s)\n", __func__, EFUSE_MODEL_NAME);
+            printf ("%s : ethernet mac write error! (%s)\n", __func__, DeviceETHERNET.efuse_board_name);
     }
 }
 
@@ -501,65 +491,11 @@ int ethernet_check (int dev_id, char *resp)
 }
 
 //------------------------------------------------------------------------------
-static void default_config_write (const char *fname)
-{
-    FILE *fp;
-    char value [STR_PATH_LENGTH *2 +1];
-
-    if ((fp = fopen(fname, "wt")) == NULL)
-        return;
-
-    // default value write
-    fputs   ("# info : iperf check speed \n", fp);
-    memset  (value, 0, sizeof(value));
-    sprintf (value, "%d,\n", DEFAULT_IPERF_SPEED);
-    fputs   (value, fp);
-    fclose  (fp);
-}
-
 //------------------------------------------------------------------------------
-static void default_config_read (void)
-{
-    FILE *fp;
-    char fname [STR_PATH_LENGTH +1], value [STR_PATH_LENGTH +1], *ptr;
-
-    memset  (fname, 0, STR_PATH_LENGTH);
-    sprintf (fname, "%sjig-%s.cfg", CONFIG_FILE_PATH, "ethernet");
-
-    if (access (fname, R_OK) != 0) {
-        default_config_write (fname);
-        return;
-    }
-
-    if ((fp = fopen(fname, "r")) == NULL)
-        return;
-
-    while(1) {
-        memset (value , 0, STR_PATH_LENGTH);
-        if (fgets (value, sizeof (value), fp) == NULL)
-            break;
-
-        switch (value[0]) {
-            case '#':   case '\n':
-                break;
-            default :
-                // default value write
-                // fputs   ("# info : iperf check speed \n", fp);
-                if ((ptr = strtok ( value, ",")) != NULL) {
-                    DeviceETHERNET.iperf_check_speed = atoi (ptr);
-                }
-                break;
-        }
-    }
-    fclose(fp);
-}
-
-//------------------------------------------------------------------------------
-int ethernet_grp_init (void)
+void ethernet_grp_init (char *cfg)
 {
     memset (&DeviceETHERNET, 0, sizeof(DeviceETHERNET));
 
-    default_config_read ();
     if (ethernet_link_speed() != LINK_SPEED_1G) {
         ethernet_link_setup (LINK_SPEED_1G);
         sleep (1);
