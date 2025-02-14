@@ -120,7 +120,7 @@ void adc_grp_init (char *cfg)
             did = atoi(tok);
             switch (did) {
                 case eADC_H37: case eADC_H40:
-                DeviceADC[did].init = 1;
+                    DeviceADC[did].init = 1;
                     if ((tok = strtok (NULL, ",")) != NULL)
                         strncpy (DeviceADC[did].path, tok, strlen(tok));
 

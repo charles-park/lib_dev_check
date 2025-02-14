@@ -84,9 +84,10 @@ struct device_ethernet {
 /*
     2024 New Server Port
     ODROID-C4  : 8888
-    ODROID-M1  : 8889
-    ODROID-M1S : 8890
-    ODROID-M2  : 8891
+    ODROID-M1  : 9000
+    ODROID-M1S : 9001
+    ODROID-M2  : 9002
+    ODROID-C5  : 9003
 */
 #define DEFAULT_SERVER_PORT     8888
 
