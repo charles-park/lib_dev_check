@@ -497,17 +497,21 @@ void ethernet_grp_init (char *cfg)
     char *tok;
 
     if ((tok = strtok (cfg, ",")) != NULL) {
-        if ((tok = strtok (NULL, ",")) != NULL)
-            DeviceETHERNET.link_speed = atoi(tok);
+        if ((tok = strtok (NULL, ",")) != NULL) {
+            if (atoi(tok) == eETHERNET_CFG) {
+                if ((tok = strtok (NULL, ",")) != NULL)
+                    DeviceETHERNET.link_speed = atoi(tok);
 
-        if ((tok = strtok (NULL, ",")) != NULL)
-            strncpy (DeviceETHERNET.efuse_board_name, tok, strlen(tok));
+                if ((tok = strtok (NULL, ",")) != NULL)
+                    strncpy (DeviceETHERNET.efuse_board_name, tok, strlen(tok));
 
-        if ((tok = strtok (NULL, ",")) != NULL)
-            DeviceETHERNET.server_port = atoi(tok);
+                if ((tok = strtok (NULL, ",")) != NULL)
+                    DeviceETHERNET.server_port = atoi(tok);
 
-        if ((tok = strtok (NULL, ",")) != NULL)
-            DeviceETHERNET.iperf_check_speed = atoi(tok);
+                if ((tok = strtok (NULL, ",")) != NULL)
+                    DeviceETHERNET.iperf_check_speed = atoi(tok);
+            }
+        }
     }
 
     if (ethernet_link_speed() != DeviceETHERNET.link_speed) {

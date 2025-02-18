@@ -28,6 +28,7 @@ enum {
     eHEADER_40,
     eHEADER_7,
     eHEADER_14,
+    eHEADER_CFG = 9,
     eHEADER_END
 };
 

@@ -25,6 +25,9 @@ enum {
     eADC_H37,
     // Header 40 ADC
     eADC_H40,
+
+    // ADC Config
+    eADC_CFG = 9,
     eADC_END
 };
 

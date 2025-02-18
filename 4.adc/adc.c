@@ -127,7 +127,7 @@ void adc_grp_init (char *cfg)
                         DeviceADC[did].min = atoi(tok);
                     break;
 
-                case 9: /* ADC config */
+                case eADC_CFG: /* ADC config */
                     // Reference voltage(mV)
                     if ((tok = strtok (NULL, ",")) != NULL)
                         ReferenceADC = atoi(tok);

@@ -31,6 +31,9 @@ enum {
     eETHERNET_LINK,
     /* NLP Server IP (Port 8888 ~ )*/
     eETHERNET_SERVER,
+
+    /* Ehternet default config */
+    eETHERNET_CFG = 9,
     eETHERNET_END
 };
 

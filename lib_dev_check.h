@@ -116,6 +116,8 @@ typedef struct parse_resp_data__t {
 }   parse_resp_data_t;
 
 //------------------------------------------------------------------------------
+extern int find_file_path       (const char *fname, char *file_path);
+//------------------------------------------------------------------------------
 extern int  device_resp_parse   (const char *resp, parse_resp_data_t *pdata);
 extern int  device_resp_check   (parse_resp_data_t *pdata);
 //------------------------------------------------------------------------------

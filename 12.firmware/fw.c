@@ -69,40 +69,6 @@ const char *reset_hub = "echo reset > /sys/devices/platform/gpio-reset/reset-usb
 const char *read_fw_ver  = "usb-devices | grep Rev | grep 2109 | grep 817 | awk '{print $4}' | sed \"s/Rev=//g\"";
 
 //------------------------------------------------------------------------------
-static int find_file_path (const char *fname, char *file_path)
-{
-    FILE *fp;
-    char cmd_line[STR_PATH_LENGTH * 2];
-
-    memset (cmd_line, 0, sizeof(cmd_line));
-    sprintf(cmd_line, "%s\n", "pwd");
-
-    if (NULL != (fp = popen(cmd_line, "r"))) {
-        memset (cmd_line, 0, sizeof(cmd_line));
-        fgets  (cmd_line, STR_PATH_LENGTH, fp);
-        pclose (fp);
-
-        strncpy (file_path, cmd_line, strlen(cmd_line)-1);
-
-        memset (cmd_line, 0, sizeof(cmd_line));
-        sprintf(cmd_line, "find -name %s\n", fname);
-        if (NULL != (fp = popen(cmd_line, "r"))) {
-            memset (cmd_line, 0, sizeof(cmd_line));
-            fgets  (cmd_line, STR_PATH_LENGTH, fp);
-            pclose (fp);
-            if (strlen(cmd_line)) {
-                strncpy (&file_path[strlen(file_path)], &cmd_line[1], strlen(cmd_line)-1);
-                file_path[strlen(file_path)-1] = ' ';
-                return 1;
-            }
-            return 0;
-        }
-    }
-    pclose(fp);
-    return 0;
-}
-
-//------------------------------------------------------------------------------
 static void usb_hub_reset (void)
 {
     FILE *fp;
@@ -231,6 +197,7 @@ int fw_grp_init (void)
 {
     int id;
 
+#if 0
     for (id = 0; id < eFW_END; id++) {
         memset (DeviceFW[id].exec_path, 0, sizeof(DeviceFW[id].exec_path));
         memset (DeviceFW[id].fw_path,   0, sizeof(DeviceFW[id].fw_path));
@@ -250,6 +217,7 @@ int fw_grp_init (void)
             }
         }
     }
+#endif
     return 1;
 }
 

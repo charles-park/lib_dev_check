@@ -197,8 +197,8 @@ void header_grp_init (char *cfg)
     if ((tok = strtok (cfg, ",")) != NULL) {
         if ((tok = strtok (NULL, ",")) != NULL) {
             did = atoi(tok);
-            if ((tok = strtok (NULL, ",")) != NULL) h_s = atoi (tok);
-            if (h_s) {
+            if (did != eHEADER_CFG) {
+                if ((tok = strtok (NULL, ",")) != NULL) h_s = atoi (tok);
                 if ((tok = strtok (NULL, ",")) != NULL) h_c = atoi (tok);
                 switch (did) {
                     case eHEADER_40: h_a = &HEADER40[0]; break;
@@ -217,7 +217,7 @@ void header_grp_init (char *cfg)
             } else {
                 // Header ADC Name(h_s == 0)
                 if ((tok = strtok (NULL, ",")) != NULL) {
-                    switch (did) {
+                    switch (atoi(tok)) {
                         case eHEADER_40:
                             HEADER40[0] = NC;
                             strncpy (HEADER40_CON, tok, strlen(tok));

@@ -23,14 +23,16 @@
 enum {
     eAUDIO_LEFT,
     eAUDIO_RIGHT,
+    eAUDIO_CFG = 9,
     eAUDIO_END
 };
 
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int audio_check     (int dev_id, char *resp);
-extern int audio_grp_init  (void);
+extern int  audio_data_check(int dev_id, int resp_i);
+extern int  audio_check     (int dev_id, char *resp);
+extern void audio_grp_init  (char *cfg);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

@@ -190,62 +190,6 @@ int device_check (int gid, int did, char *dev_resp)
 }
 
 //------------------------------------------------------------------------------
-#if 0
-ui_grp_t *ui_init (fb_info_t *fb, const char *cfg_filename)
-{
-    ui_grp_t *ui_grp;
-    FILE *pfd;
-    char buf[256], is_cfg_file = 0;
-
-    if ((pfd = fopen(cfg_filename, "r")) == NULL)
-        return   NULL;
-
-    if ((ui_grp = (ui_grp_t *)malloc(sizeof(ui_grp_t))) == NULL)
-        return   NULL;
-
-    memset (ui_grp, 0x00, sizeof(ui_grp_t));
-    memset (buf,    0x00, sizeof(buf));
-
-    while(fgets(buf, sizeof(buf), pfd) != NULL) {
-        if (!is_cfg_file) {
-            is_cfg_file = strncmp ("ODROID-UI-CONFIG", buf, strlen(buf)-1) == 0 ? 1 : 0;
-            memset (buf, 0x00, sizeof(buf));
-            continue;
-        }
-        switch(buf[0]) {
-            case  'C':  _ui_parser_cmd_C (buf, fb, ui_grp); break;
-            case  'B':  _ui_parser_cmd_B (buf, fb, ui_grp); break;
-            case  'I':  _ui_parser_cmd_I (buf, ui_grp);     break;
-            case  'T':  _ui_parser_cmd_T (buf, ui_grp);     break;
-            case  'R':  _ui_parser_cmd_R (buf, fb, ui_grp); break;
-            case  'S':  _ui_parser_cmd_S (buf, ui_grp);     break;
-            default :
-                fprintf(stdout, "ERROR: Unknown parser command! cmd = %c\n", buf[0]);
-            case  '#':  case  '\n':
-                break;
-        }
-        memset (buf, 0x00, sizeof(buf));
-    }
-
-    if (!is_cfg_file) {
-        fprintf(stdout, "ERROR: UI Config File not found! (filename = %s)\n", cfg_filename);
-        free (ui_grp);
-        return NULL;
-    }
-
-    /* all item update */
-    if (ui_grp->b_item_cnt)
-        ui_update (fb, ui_grp, -1);
-
-    // cfg file close
-    if (pfd)
-        fclose (pfd);
-
-    // file parser
-    return   ui_grp;
-}
-#endif
-
 //------------------------------------------------------------------------------
 static int device_setup (void)
 {
@@ -276,8 +220,9 @@ static int device_setup (void)
 
         if ((ptr = strstr (buf, "ETHERNET"))  != NULL)  ethernet_grp_init (buf);
         if ((ptr = strstr (buf, "HEADER"))    != NULL)  header_grp_init (buf);
+        if ((ptr = strstr (buf, "AUDIO"))     != NULL)  audio_grp_init (buf);
 
-        if ((ptr = strstr (buf, "AUDIO"))   != NULL)
+        if ((ptr = strstr (buf, "LED"))   != NULL)
         {
             printf ("%s : %s line -> %s\n", __func__, ptr, buf);
         }
