@@ -173,13 +173,13 @@ int header_check (int dev_id, char *resp)
     status = pattern_write (id, DEVICE_ACTION(dev_id)) ? 1 : -1;
     switch (id) {
         case eHEADER_40:
-            DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', "CON1");
+            DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', HEADER40_CON);
             break;
         case eHEADER_14:
-            DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', "P1_5");
+            DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', HEADER14_CON);
             break;
         case eHEADER_7:
-            DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', "P13");
+            DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', HEADER7_CON);
             break;
         default :
             break;
@@ -215,6 +215,7 @@ void header_grp_init (char *cfg)
                     }
                 }
             } else {
+                // Header ADC Name(h_s == 0)
                 if ((tok = strtok (NULL, ",")) != NULL) {
                     switch (did) {
                         case eHEADER_40:
