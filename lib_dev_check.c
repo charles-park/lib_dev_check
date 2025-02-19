@@ -222,8 +222,8 @@ static int device_setup (void)
         if ((ptr = strstr (buf, "HEADER"))    != NULL)  header_grp_init (buf);
         if ((ptr = strstr (buf, "AUDIO"))     != NULL)  audio_grp_init (buf);
         if ((ptr = strstr (buf, "LED"))       != NULL)  led_grp_init (buf);
-
         if ((ptr = strstr (buf, "IR"))        != NULL)  ir_grp_init (buf);
+        if ((ptr = strstr (buf, "PWM"))       != NULL)  pwm_grp_init (buf);
 
         if ((ptr = strstr (buf, "FW"))   != NULL)
         {
