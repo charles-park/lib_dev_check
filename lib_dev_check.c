@@ -225,7 +225,7 @@ static int device_setup (void)
 
         if ((ptr = strstr (buf, "IR"))        != NULL)  ir_grp_init (buf);
 
-        if ((ptr = strstr (buf, "PWM"))   != NULL)
+        if ((ptr = strstr (buf, "FW"))   != NULL)
         {
             printf ("%s : %s line -> %s\n", __func__, ptr, buf);
         }
