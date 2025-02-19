@@ -70,6 +70,7 @@ int find_file_path (const char *fname, char *file_path)
 }
 
 //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 int device_resp_parse (const char *resp_msg, parse_resp_data_t *pdata)
 {
     int msg_size = (int)strlen(resp_msg);
@@ -210,7 +211,6 @@ static int device_setup (void)
     while (fgets(buf, sizeof(buf), pfd) != NULL) {
 
         if (buf[0] == '#' || buf[0] == '\n')  continue;
-
 //        printf ("%s : buf = %s\n", __func__, buf);
         if ((ptr = strstr (buf, "SYSTEM"))    != NULL)  system_grp_init (buf);
         if ((ptr = strstr (buf, "STORAGE"))   != NULL)  storage_grp_init (buf);
@@ -221,8 +221,9 @@ static int device_setup (void)
         if ((ptr = strstr (buf, "ETHERNET"))  != NULL)  ethernet_grp_init (buf);
         if ((ptr = strstr (buf, "HEADER"))    != NULL)  header_grp_init (buf);
         if ((ptr = strstr (buf, "AUDIO"))     != NULL)  audio_grp_init (buf);
+        if ((ptr = strstr (buf, "LED"))       != NULL)  led_grp_init (buf);
 
-        if ((ptr = strstr (buf, "LED"))   != NULL)
+        if ((ptr = strstr (buf, "IR"))   != NULL)
         {
             printf ("%s : %s line -> %s\n", __func__, ptr, buf);
         }

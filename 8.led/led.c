@@ -39,18 +39,13 @@
 //------------------------------------------------------------------------------
 struct device_led {
     // Control path
-    const char *path;
-    // set str
-    const char *set;
-    // clear str
-    const char *clr;
-};
-
-struct device_led_adc {
+    char path [STR_PATH_LENGTH];
+    // str set/clr
+    int on_value, off_value;
+    // ADC con_name
+    char cname[STR_NAME_LENGTH];
     // adc value
     int max, min;
-    // adc pin
-    char pin[STR_NAME_LENGTH];
 };
 
 //------------------------------------------------------------------------------
@@ -62,35 +57,26 @@ struct device_led_adc {
 //------------------------------------------------------------------------------
 struct device_led DeviceLED [eLED_END] = {
     // eLED_POWER
-    { "none", "0", "255" },
+    { { 0, }, 0, 0, { 0, }, 0, 0},
     // eLED_ALIVE
-    { "/sys/class/leds/blue:heartbeat/brightness" , "255", "0" },
-};
-
-const char *ALIVE_TRIGGER = "/sys/class/leds/blue:heartbeat/trigger";
-
-struct device_led_adc DeviceLED_ADC[eLED_END] = {
-    { 600, 400, "P1_6.3" }, // eLED_POWER
-    { 600, 500, "P1_6.4" }, // eLED_ALIVE
-    { 300, 100, "P1_6.5" }, // eLED_100M
-    { 300, 100, "P1_6.6" }, // eLED_1G
+    { { 0, }, 0, 0, { 0, }, 0, 0},
+    // eLED_100M
+    { { 0, }, 0, 0, { 0, }, 0, 0},
+    // eLED_1G
+    { { 0, }, 0, 0, { 0, }, 0, 0},
 };
 
 //------------------------------------------------------------------------------
-#define LED_LINK_100M    100
-#define LED_LINK_1G      1000
-
-//------------------------------------------------------------------------------
-static int ethernet_link_speed (void)
+static int ethernet_link_speed (int id)
 {
     FILE *fp;
     char cmd_line[STR_PATH_LENGTH];
 
-    if (access ("/sys/class/net/eth0/speed", F_OK) != 0)
+    if (access (DeviceLED[id].path, F_OK) != 0)
         return 0;
 
     memset (cmd_line, 0x00, sizeof(cmd_line));
-    if ((fp = fopen ("/sys/class/net/eth0/speed", "r")) != NULL) {
+    if ((fp = fopen (DeviceLED[id].path, "r")) != NULL) {
         memset (cmd_line, 0x00, sizeof(cmd_line));
         if (NULL != fgets (cmd_line, sizeof(cmd_line), fp)) {
             fclose (fp);
@@ -101,12 +87,12 @@ static int ethernet_link_speed (void)
 }
 
 //------------------------------------------------------------------------------
-static int ethernet_link_setup (int speed)
+static int ethernet_link_setup (int dev_id, int speed)
 {
     FILE *fp;
     char cmd_line[STR_PATH_LENGTH], retry = 10;
 
-    if (ethernet_link_speed () != speed) {
+    if (ethernet_link_speed (DEVICE_ID(dev_id)) != speed) {
         memset (cmd_line, 0x00, sizeof(cmd_line));
         sprintf(cmd_line,"ethtool -s eth0 speed %d duplex full 2>&1 && sync ", speed);
         if ((fp = popen(cmd_line, "w")) != NULL)
@@ -115,7 +101,7 @@ static int ethernet_link_setup (int speed)
         // timeout 10 sec
         while (retry--) {
             sleep (1);
-            if (ethernet_link_speed() == speed)
+            if (ethernet_link_speed(DEVICE_ID(dev_id)) == speed)
                 return 1;
         }
         return 0;
@@ -162,9 +148,9 @@ int led_data_check (int dev_id, int resp_i)
         case eLED_ALIVE: case eLED_POWER:
         case eLED_100M:  case eLED_1G:
             if (DEVICE_ACTION(dev_id))
-                status = (resp_i > DeviceLED_ADC[id].max) ? 1 : 0;    // led on
+                status = (resp_i > DeviceLED[id].max) ? 1 : 0;    // led on
             else
-                status = (resp_i < DeviceLED_ADC[id].min) ? 1 : 0;    // led off
+                status = (resp_i < DeviceLED[id].min) ? 1 : 0;    // led off
             break;
         default :
             status = 0;
@@ -184,115 +170,95 @@ int led_check (int dev_id, char *resp)
                 status = 1;
                 value  = DEVICE_ACTION(dev_id);
             } else {
-                if (DEVICE_ACTION(dev_id) == 1)
-                    value = led_write (DeviceLED[id].path, DeviceLED[id].set);
-                else
-                    value = led_write (DeviceLED[id].path, DeviceLED[id].clr);
+                char w_value[STR_NAME_LENGTH];
 
+                memset (w_value, 0, sizeof(w_value));
+
+                if (DEVICE_ACTION(dev_id) == 1) sprintf (w_value, "%d", DeviceLED[id].on_value);
+                else                            sprintf (w_value, "%d", DeviceLED[id].off_value);
+
+                value  = led_write (DeviceLED[id].path, w_value);
                 status = (value == led_read (DeviceLED[id].path)) ? 1 : -1;
             }
             break;
 
         case eLED_100M: case eLED_1G:
-            // swap id (if led off)
-            if (DEVICE_ACTION(dev_id) == 0)
-                status = ethernet_link_setup ( (id == eLED_100M) ?
-                                        LED_LINK_1G:LED_LINK_100M ) ? 1 : -1;
-            else
-                status = ethernet_link_setup ( (id == eLED_100M) ?
-                                        LED_LINK_100M:LED_LINK_1G ) ? 1 : -1;
+            value  = DEVICE_ACTION(dev_id) ? DeviceLED[id].on_value : DeviceLED[id].off_value;
+            status = ethernet_link_setup (dev_id, value) ? 1 : -1;
             break;
         default :
             break;
     }
 
-    DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', DeviceLED_ADC[id].pin);
+    DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', DeviceLED[id].cname);
 
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;
 }
 
 //------------------------------------------------------------------------------
-static void default_config_write (const char *fname)
+void led_grp_init (char *cfg)
 {
-    FILE *fp;
-    char value [STR_PATH_LENGTH *2 +1];
+    char *tok;
+    int did;
 
-    if ((fp = fopen(fname, "wt")) == NULL)
-        return;
+    if ((tok = strtok (cfg, ",")) != NULL) {
+        if ((tok = strtok (NULL, ",")) != NULL) {
+            did = atoi(tok);
+            switch (did) {
+                case eLED_POWER: case eLED_ALIVE:
+                case eLED_100M: case eLED_1G:
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DeviceLED[did].path, tok, strlen(tok));
 
-    // default value write
-    fputs   ("# info : dev_id, adc_max, adc_min, adc_pin \n", fp);
-    {
-        int id;
-        for (id = 0; id < eLED_END; id++) {
-            memset  (value, 0, STR_PATH_LENGTH *2);
-            sprintf (value, "%d,%d,%d,%s,\n",
-                id, DeviceLED_ADC[id].max, DeviceLED_ADC[id].min, DeviceLED_ADC[id].pin);
-            fputs   (value, fp);
+                    // led on value
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceLED[did].on_value = atoi(tok);
 
-        }
-    }
-    // file close
-    fclose  (fp);
-}
+                    // led off value
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceLED[did].off_value = atoi(tok);
 
-//------------------------------------------------------------------------------
-static void default_config_read (void)
-{
-    FILE *fp;
-    char fname [STR_PATH_LENGTH +1], value [STR_PATH_LENGTH +1], *ptr;
-    int dev_id;
+                    // ADC port name
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DeviceLED[did].cname, tok, strlen(tok));
 
-    memset  (fname, 0, STR_PATH_LENGTH);
-    sprintf (fname, "%sjig-%s.cfg", CONFIG_FILE_PATH, "led");
+                    // led on ADC value
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceLED[did].max = atoi(tok);
 
-    if (access (fname, R_OK) != 0) {
-        default_config_write (fname);
-        return;
-    }
+                    // led off ADC value
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceLED[did].min = atoi(tok);
 
-    if ((fp = fopen(fname, "r")) == NULL)
-        return;
+                    break;
+                case eLED_CFG:
+                    if ((tok = strtok (NULL, ",")) != NULL) {
+                        char ctl_path [STR_PATH_LENGTH], ctl_str [STR_NAME_LENGTH];
 
-    while(1) {
-        memset (value , 0, STR_PATH_LENGTH);
-        if (fgets (value, sizeof (value), fp) == NULL)
-            break;
+                        memset (ctl_path, 0, sizeof(ctl_path));
+                        memset (ctl_str,  0, sizeof(ctl_str));
 
-        switch (value[0]) {
-            case '#':   case '\n':
-                break;
-            default :
-                // default value write
-                // fputs   ("# info : dev_id, dev_node, rd_speed, wr_speed \n", fp);
-                if ((ptr = strtok (value, ",")) != NULL) {
-                    dev_id = atoi (ptr);
-                    if ((ptr = strtok ( NULL, ",")) != NULL)
-                       DeviceLED_ADC[dev_id].max = atoi (ptr);
-                    if ((ptr = strtok ( NULL, ",")) != NULL)
-                       DeviceLED_ADC[dev_id].min = atoi (ptr);
-                    if ((ptr = strtok ( NULL, ",")) != NULL) {
-                        memset (DeviceLED_ADC[dev_id].pin, 0,
-                                sizeof(DeviceLED_ADC[dev_id].pin));
-                        strcpy (DeviceLED_ADC[dev_id].pin, ptr);
+                        switch (atoi(tok)) {
+                            case eLED_POWER: case eLED_ALIVE:
+                                if ((tok = strtok (NULL, ",")) != NULL)
+                                    strncpy (ctl_path, tok, strlen(tok));
+                                if ((tok = strtok (NULL, ",")) != NULL)
+                                    strncpy (ctl_str, tok, strlen(tok));
+
+                                led_write (ctl_path, ctl_str);
+                                break;
+                            default:
+                                break;
+                        }
                     }
-                }
-                break;
+                    break;
+                default :
+                    printf ("%s : error! unknown did = %d\n", __func__, did);
+                    break;
+            }
         }
     }
-    fclose(fp);
-}
-
-//------------------------------------------------------------------------------
-int led_grp_init (void)
-{
-    default_config_read ();
-    // Alive LED Trigger setting
-    if (access (ALIVE_TRIGGER, F_OK) == 0)
-        led_write (ALIVE_TRIGGER, "none");
-
-    return 1;
 }
 
 //------------------------------------------------------------------------------

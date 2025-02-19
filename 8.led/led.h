@@ -25,15 +25,16 @@ enum {
     eLED_ALIVE,
     eLED_100M,  // ethrenet green
     eLED_1G,    // ethrenet orange
+    eLED_CFG = 9,
     eLED_END
 };
 
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int led_data_check(int dev_id, int resp_i);
-extern int led_check     (int dev_id, char *resp);
-extern int led_grp_init  (void);
+extern int  led_data_check(int dev_id, int resp_i);
+extern int  led_check     (int dev_id, char *resp);
+extern void led_grp_init  (char *cfg);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
