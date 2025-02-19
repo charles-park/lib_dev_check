@@ -70,6 +70,9 @@ volatile int AudioHW = 0, AudioCH = 0, AudioTime = 0, AudioEnable = 0;
 //------------------------------------------------------------------------------
 // thread control variable
 //------------------------------------------------------------------------------
+// speaker-test -D hw:AudioHW,AudioCH -c 2 -t sine -f 1000 -p 2 -s 1 (left)
+// speaker-test -D hw:AudioHW,AudioCH -c 2 -t sine -f 1000 -p 2 -s 2 (right)
+//------------------------------------------------------------------------------
 void *audio_thread_func (void *arg)
 {
     struct device_audio *paudio = (struct device_audio *)arg;
@@ -78,13 +81,15 @@ void *audio_thread_func (void *arg)
     char cmd [STR_PATH_LENGTH *2];
 
     AudioEnable = 1;
+
     memset  (cmd, 0, sizeof(cmd));
     sprintf (cmd, "aplay -Dhw:%d,%d %s -d %d && sync",
-                    AudioHW, AudioCH, paudio->path, AudioTime);
+                AudioHW, AudioCH, paudio->path, AudioTime);
 
     if ((fp = popen (cmd, "w")) != NULL)
         pclose(fp);
-    AudioEnable = 0;
+
+    AudioEnable = 0;    usleep (100 *1000);
 
     return arg;
 }
@@ -93,11 +98,7 @@ void *audio_thread_func (void *arg)
 void audio_thread_stop (void)
 {
     FILE *fp;
-    char cmd [STR_PATH_LENGTH];
-    const char *audio_stop_cmd = "ps ax | grep aplay | awk '{print $1}' | xargs kill";
-
-    memset  (cmd, 0, sizeof(cmd));
-    sprintf (cmd, "%s", audio_stop_cmd);
+    const char *cmd = "ps ax | grep aplay | awk '{print $1}' | xargs kill";
 
     if ((fp = popen (cmd, "w")) != NULL)
         pclose(fp);
