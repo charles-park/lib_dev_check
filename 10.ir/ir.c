@@ -38,19 +38,57 @@
 #include "ir.h"
 
 //------------------------------------------------------------------------------
+struct device_ir {
+    char path  [STR_PATH_LENGTH];
+    // find string : udevadm info -a -n {path} | grep {f_str}
+    char f_str [STR_NAME_LENGTH];
+
+    int pass_count;
+    int pass_key_code;
+
+    int key_code;
+    int key_count;
+};
+
+//------------------------------------------------------------------------------
 //
 // Configuration
 //
 //------------------------------------------------------------------------------
-#define IR_EVENT_PASS   5
-/*
-    https://wiki.odroid.com/odroid-c4/application_note/lirc/lirc_ubuntu18.04#tab__odroid-c2n2c4hc4
-*/
-const char *IR_EVENT_PATH = "/dev/input/event2";
-
-int IR_EVENT_COUNT = 0, IR_KEY_CODE = 0;
+struct device_ir DeviceIR = {
+    { 0, }, { 0, }, 0, 0, 0, 0
+};
 
 //------------------------------------------------------------------------------
+static int find_event (const char *f_str)
+{
+    FILE *fp;
+    char cmd  [STR_PATH_LENGTH];
+    int ev_num = 0;
+
+    /*
+        find /dev/input -name event*        udevadm info -a -n /dev/input/event3 | grep 0705
+    */
+    while (1) {
+        memset  (cmd, 0, sizeof(cmd));
+        sprintf (cmd, "/dev/input/event%d", ev_num);
+        if (access  (cmd, F_OK))    return -1;
+
+        memset  (cmd, 0, sizeof(cmd));
+        sprintf (cmd, "udevadm info -a -n /dev/input/event%d | grep %s", ev_num, f_str);
+        if ((fp = popen(cmd, "r")) != NULL) {
+            memset (cmd, 0x00, sizeof(cmd));
+            while (fgets (cmd, sizeof(cmd), fp) != NULL) {
+                if (strstr (cmd, f_str) != NULL) {
+                    return ev_num;
+                    pclose (fp);
+                }
+            }
+        }
+        ev_num++;
+    }
+}
+
 //------------------------------------------------------------------------------
 pthread_t thread_ir;
 
@@ -60,14 +98,16 @@ void *thread_func_ir (void *arg)
     struct timeval  timeout;
     fd_set readFds;
     static int fd = -1;
+    struct device_ir *ir = (struct device_ir *)arg;
 
-    // IR Device Name
-    // /sys/class/input/event0/device/name -> fdd70030.pwm
-    if ((fd = open(IR_EVENT_PATH, O_RDONLY)) < 0) {
-        printf ("%s : %s error!\n", __func__, IR_EVENT_PATH);
+    // IR Device Name (meson-ir)
+    sprintf (ir->path, "/dev/input/event%d", find_event (ir->f_str));
+
+    if ((fd = open(ir->path, O_RDONLY)) < 0) {
+        printf ("%s : %s error!\n", __func__, ir->path);
         return arg;
     }
-    IR_EVENT_COUNT = 0, IR_KEY_CODE = 0;
+
     while (1) {
         // recive time out config
         // Set 1ms timeout counter
@@ -92,10 +132,14 @@ void *thread_func_ir (void *arg)
                             case KEY_MUTE:  case KEY_HOME:  case KEY_VOLUMEDOWN: case KEY_VOLUMEUP:
                             case KEY_MENU:  case KEY_UP:    case KEY_DOWN:       case KEY_LEFT:
                             case KEY_RIGHT: case KEY_ENTER: case KEY_BACK:
-                                IR_EVENT_COUNT++;
-                                IR_KEY_CODE = event.code;
+                                if (ir->pass_key_code && (ir->pass_key_code == event.code))
+                                    ir->key_count++;
+                                else
+                                    ir->key_count++;
+
+                                ir->key_code = event.code;
                                 printf ("IR_EVENT_COUNT = %d, IR_KEY_CODE = %d\n",
-                                            IR_EVENT_COUNT, IR_KEY_CODE);
+                                    ir->key_count, ir->key_code);
                                 break;
                             default :
                                 break;
@@ -117,9 +161,9 @@ int ir_check (int dev_id, char *resp)
     int value = 0, status = 0, id = DEVICE_ID(dev_id);
 
     switch (id) {
-        case eIR_EVENT:
-            status = (IR_EVENT_COUNT > IR_EVENT_PASS) ? 1 : 0;
-            value  =  IR_KEY_CODE;
+        case eIR_ID0:
+            status = (DeviceIR.key_count > DeviceIR.pass_count) ? 1 : 0;
+            value  =  DeviceIR.key_code;
             break;
         default :
             break;
@@ -130,10 +174,34 @@ int ir_check (int dev_id, char *resp)
 }
 
 //------------------------------------------------------------------------------
-int ir_grp_init (void)
+void ir_grp_init (char *cfg)
 {
-    pthread_create (&thread_ir, NULL, thread_func_ir, NULL);
-    return 1;
+    char *tok;
+    int did;
+
+    if ((tok = strtok (cfg, ",")) != NULL) {
+        if ((tok = strtok (NULL, ",")) != NULL) {
+            did = atoi(tok);
+            switch (did) {
+                case eIR_ID0:
+                    break;
+                case eIR_CFG:
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DeviceIR.f_str, tok, strlen(tok));
+
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceIR.pass_count = atoi (tok);
+
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceIR.pass_key_code = atoi (tok);
+
+                    pthread_create (&thread_ir, NULL, thread_func_ir, &DeviceIR);
+                    break;
+                default :
+                    break;
+            }
+        }
+    }
 }
 
 //------------------------------------------------------------------------------

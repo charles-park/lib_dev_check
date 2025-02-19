@@ -223,7 +223,9 @@ static int device_setup (void)
         if ((ptr = strstr (buf, "AUDIO"))     != NULL)  audio_grp_init (buf);
         if ((ptr = strstr (buf, "LED"))       != NULL)  led_grp_init (buf);
 
-        if ((ptr = strstr (buf, "IR"))   != NULL)
+        if ((ptr = strstr (buf, "IR"))        != NULL)  ir_grp_init (buf);
+
+        if ((ptr = strstr (buf, "PWM"))   != NULL)
         {
             printf ("%s : %s line -> %s\n", __func__, ptr, buf);
         }

@@ -20,10 +20,11 @@
 //------------------------------------------------------------------------------
 // Define the Device ID for the AUDIO group.
 //------------------------------------------------------------------------------
+#define eAUDIO_CFG  9
+
 enum {
     eAUDIO_LEFT,
     eAUDIO_RIGHT,
-    eAUDIO_CFG = 9,
     eAUDIO_END
 };
 

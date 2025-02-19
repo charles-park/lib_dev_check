@@ -20,14 +20,15 @@
 //------------------------------------------------------------------------------
 // Define the Device ID for the ADC group.
 //------------------------------------------------------------------------------
+// ADC Config
+#define eADC_CFG    9
+
 enum {
     // Header 37 ADC
     eADC_H37,
     // Header 40 ADC
     eADC_H40,
 
-    // ADC Config
-    eADC_CFG = 9,
     eADC_END
 };
 

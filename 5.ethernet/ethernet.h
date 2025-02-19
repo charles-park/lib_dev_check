@@ -20,6 +20,9 @@
 //------------------------------------------------------------------------------
 // Define the Device ID for the ETHERNET group.
 //------------------------------------------------------------------------------
+/* Ehternet default config */
+#define eETHERNET_CFG   9
+
 enum {
     /* R = ip read, I = init value */
     eETHERNET_IP = 0,
@@ -32,8 +35,6 @@ enum {
     /* NLP Server IP (Port 8888 ~ )*/
     eETHERNET_SERVER,
 
-    /* Ehternet default config */
-    eETHERNET_CFG = 9,
     eETHERNET_END
 };
 

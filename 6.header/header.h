@@ -24,11 +24,11 @@
 //------------------------------------------------------------------------------
 // Define the Device ID for the HEADER group.
 //------------------------------------------------------------------------------
+#define eHEADER_CFG 9
 enum {
     eHEADER_40,
     eHEADER_7,
     eHEADER_14,
-    eHEADER_CFG = 9,
     eHEADER_END
 };
 

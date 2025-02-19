@@ -20,12 +20,13 @@
 //------------------------------------------------------------------------------
 // Define the Device ID for the LED group.
 //------------------------------------------------------------------------------
+#define eLED_CFG    9
+
 enum {
     eLED_POWER,
     eLED_ALIVE,
     eLED_100M,  // ethrenet green
     eLED_1G,    // ethrenet orange
-    eLED_CFG = 9,
     eLED_END
 };
 
