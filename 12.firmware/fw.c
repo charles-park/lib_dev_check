@@ -195,9 +195,9 @@ int fw_check (int dev_id, char *resp)
 //------------------------------------------------------------------------------
 int fw_grp_init (void)
 {
+#if 0
     int id;
 
-#if 0
     for (id = 0; id < eFW_END; id++) {
         memset (DeviceFW[id].exec_path, 0, sizeof(DeviceFW[id].exec_path));
         memset (DeviceFW[id].fw_path,   0, sizeof(DeviceFW[id].fw_path));
