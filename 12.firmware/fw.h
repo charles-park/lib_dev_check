@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 /**
- * @file gpio_pin.h
+ * @file fw.h
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
  * @version 2.0
@@ -22,15 +22,14 @@
 //------------------------------------------------------------------------------
 enum {
     eFW_C4,
-    eFW_XU4,
     eFW_END
 };
 
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int fw_check     (int dev_id, char *resp);
-extern int fw_grp_init  (void);
+extern int  fw_check     (int dev_id, char *resp);
+extern void fw_grp_init  (char *cfg);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

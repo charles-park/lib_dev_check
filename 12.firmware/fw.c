@@ -38,30 +38,23 @@
 #include "fw.h"
 
 //------------------------------------------------------------------------------
+struct device_fw {
+    // full path
+    char bin_path [STR_PATH_LENGTH];
+    char fw_path  [STR_PATH_LENGTH];
+
+    char check_fw_ver [STR_NAME_LENGTH];
+    char fw_ver [STR_NAME_LENGTH];
+};
+
+//------------------------------------------------------------------------------
 //
 // Configuration
 //
 //------------------------------------------------------------------------------
-struct device_fw {
-    // find flag
-    char is_file;
-    // Control file name
-    const char *exec_name;
-    const char *fw_name;
-    // check version
-    const char *check_ver;
-
-    // full path
-    char exec_path[STR_PATH_LENGTH];
-    char fw_path[STR_PATH_LENGTH];
-    char fw_ver [10];
-};
-
 struct device_fw DeviceFW [eFW_END] = {
     // C4
-    { 0, "upgrade_hub_arm64", "VL817_Q7_9033.bin", "90.33", { 0, }, { 0, }, { 0, } },
-    // XU4
-    { 0,              "none",              "none",   "0.0", { 0, }, { 0, }, { 0, } },
+    { { 0, }, { 0, }, { 0, }, { 0, } },
 };
 
 const char *scan_hub  = "lsusb | grep 2109 | awk '{print $6}'";
@@ -103,7 +96,34 @@ static int usb_hub_check (void)
 }
 
 //------------------------------------------------------------------------------
-static int fw_version_read (int id)
+static int c4_fw_write (int id)
+{
+    FILE *fp;
+    char cmd [STR_PATH_LENGTH *3], rdata[STR_PATH_LENGTH];
+
+    if (!usb_hub_check())   return 0;
+
+    memset  (cmd, 0, sizeof(cmd));
+    sprintf (cmd, "%s --vid=2109 -pid=0817 -script=%s && sync",
+                DeviceFW[id].bin_path, DeviceFW[id].fw_path);
+
+    printf ("%s : %s\n", __func__, cmd);
+    if ((fp = popen (cmd, "r")) != NULL) {
+        memset (rdata, 0, sizeof(rdata));
+        while (fgets (rdata, sizeof(rdata), fp) != NULL) {
+            if (strstr(rdata, "success") != NULL) {
+                pclose(fp);
+                return 1;
+            }
+            memset (rdata, 0, sizeof(rdata));
+        }
+        pclose(fp);
+    }
+    return 0;
+}
+
+//------------------------------------------------------------------------------
+static int c4_ver_read (int id)
 {
     FILE *fp;
     char cmd [STR_PATH_LENGTH *2], rdata[10];
@@ -128,45 +148,19 @@ static int fw_version_read (int id)
 }
 
 //------------------------------------------------------------------------------
-static int fw_write (int id)
+static int c4_ver_check (int id)
 {
-    FILE *fp;
-    char cmd [STR_PATH_LENGTH *3], rdata[STR_PATH_LENGTH];
-
-    if (!usb_hub_check())   return 0;
-
-    memset  (cmd, 0, sizeof(cmd));
-    sprintf (cmd, "%s --vid=2109 -pid=0817 -script=%s && sync",
-                DeviceFW[id].exec_path, DeviceFW[id].fw_path);
-
-    printf ("%s : %s\n", __func__, cmd);
-    if ((fp = popen (cmd, "r")) != NULL) {
-        memset (rdata, 0, sizeof(rdata));
-        while (fgets (rdata, sizeof(rdata), fp) != NULL) {
-            if (strstr(rdata, "success") != NULL) {
-                pclose(fp);
-                return 1;
-            }
-            memset (rdata, 0, sizeof(rdata));
-        }
-        pclose(fp);
-    }
-    return 0;
-}
-
-//------------------------------------------------------------------------------
-static int fw_version_check (int id)
-{
-    if (fw_version_read (id)) {
-        if (!strncmp (DeviceFW[id].fw_ver, DeviceFW[id].check_ver, strlen(DeviceFW[id].check_ver)))
+    if (c4_ver_read (id)) {
+        if (!strncmp (DeviceFW[id].fw_ver, DeviceFW[id].check_fw_ver,
+                        strlen(DeviceFW[id].check_fw_ver)))
             return 1;
 
         printf ("%s : firmware version check error! (read %s : check %s)\n",
-                            __func__, DeviceFW[id].fw_ver, DeviceFW[id].check_ver);
+                            __func__, DeviceFW[id].fw_ver, DeviceFW[id].check_fw_ver);
 
-        if (fw_write (id)) {
+        if (c4_fw_write (id)) {
             usb_hub_reset ();
-            return (fw_version_read (id));
+            return (c4_ver_read (id));
         }
     }
     return 0;
@@ -179,10 +173,8 @@ int fw_check (int dev_id, char *resp)
 
     switch (id) {
         case eFW_C4:
-            value  = fw_version_check (id);
+            value  = c4_ver_check (id);
             status = (value == 1) ? 1 : -1;
-            break;
-        case eFW_XU4:
             break;
         default :
             break;
@@ -193,32 +185,34 @@ int fw_check (int dev_id, char *resp)
 }
 
 //------------------------------------------------------------------------------
-int fw_grp_init (void)
+void fw_grp_init (char *cfg)
 {
-#if 0
-    int id;
+    char *tok;
+    int did;
 
-    for (id = 0; id < eFW_END; id++) {
-        memset (DeviceFW[id].exec_path, 0, sizeof(DeviceFW[id].exec_path));
-        memset (DeviceFW[id].fw_path,   0, sizeof(DeviceFW[id].fw_path));
-        memset (DeviceFW[id].fw_ver,    0, sizeof(DeviceFW[id].fw_ver));
+    if ((tok = strtok (cfg, ",")) != NULL) {
+        if ((tok = strtok (NULL, ",")) != NULL) {
+            did = atoi(tok);
+            switch (did) {
+                case eFW_C4:
+                    // exec bin file path
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        find_file_path (tok, DeviceFW[did].bin_path);
 
-        if (!strncmp("none", DeviceFW[id].fw_name,strlen("none"))) {
-            printf ("%s : not support (id = %d)\n", __func__, id);
-        } else {
-            if (find_file_path (DeviceFW[id].exec_name, DeviceFW[id].exec_path) &&
-                find_file_path (DeviceFW[id].fw_name,   DeviceFW[id].fw_path)) {
-                printf ("%s : (%s)%s\n", __func__, DeviceFW[id].exec_path, DeviceFW[id].fw_path);
-                if (fw_version_check (id)) {
-                    printf ("%s : firmware version pass (read %s : check %s)\n",
-                                    __func__, DeviceFW[id].fw_ver, DeviceFW[id].check_ver);
+                    // f/w file path
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        find_file_path (tok, DeviceFW[did].fw_path);
 
-                }
+                    // f/w ver str
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DeviceFW[did].check_fw_ver, tok, strlen(tok));
+                    break;
+                default :
+                    printf ("%s : error! unknown did = %d\n", __func__, did);
+                    break;
             }
         }
     }
-#endif
-    return 1;
 }
 
 //------------------------------------------------------------------------------

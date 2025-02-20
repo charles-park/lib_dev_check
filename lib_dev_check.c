@@ -224,11 +224,7 @@ int device_init (void)
         if ((ptr = strstr (buf, "PWM"))       != NULL)  pwm_grp_init (buf);
         if ((ptr = strstr (buf, "IR"))        != NULL)  ir_grp_init (buf);
         if ((ptr = strstr (buf, "GPIO"))      != NULL)  gpio_grp_init (buf);
-
-        if ((ptr = strstr (buf, "FW"))   != NULL)
-        {
-            printf ("%s : %s line -> %s\n", __func__, ptr, buf);
-        }
+        if ((ptr = strstr (buf, "FW"))        != NULL)  fw_grp_init (buf);
     }
     fclose (pfd);
     return 1;

@@ -285,8 +285,34 @@ void make_msg (int grp_id, int dev_id, char *dev_resp)
 }
 
 //------------------------------------------------------------------------------
+int get_int (void)
+{
+    char buf [STR_NAME_LENGTH] = { 0, }, ch;
+    int pos = 0;
+
+    while ('\n' != (ch = getc(stdin)) ) {
+        buf [ pos ] = ch;
+        if (pos < STR_NAME_LENGTH -1) pos++;
+    }
+    return atoi(buf);
+}
+
+//------------------------------------------------------------------------------
+void get_device_info (void)
+{
+    printf ("\n\n==> TEST DEVICE INFO <===\n");
+    printf ("* GROUP_ID  = "); OPT_GROUP_ID  = get_int();
+    printf ("* DEVICE_ID = "); OPT_DEVICE_ID = get_int();
+    printf ("* ACTION    = "); OPT_ACTION    = get_int();
+    printf ("\n");
+}
+
+//------------------------------------------------------------------------------
 int main (int argc, char *argv[])
 {
+    int ret, did;
+    char dev_resp [DEVICE_RESP_SIZE];
+
     parse_opts(argc, argv);
 
     // Display cmd list
@@ -298,16 +324,19 @@ int main (int argc, char *argv[])
             printf ("\tDEVICE_ID(%d) = %s\n", i, *(list[OPT_GROUP_ID].id_str + i));
         puts("");
     }
-    if (argc < 7)
+    if ((argc != 1) && argc < 7)
         print_usage(argv[0]);
 
-    device_init ();
-    {
-        int ret, did = OPT_DEVICE_ID + (OPT_ACTION * 10);
-        char dev_resp [DEVICE_RESP_SIZE];
+    // device thread wait
+    device_init (); sleep (2);
 
-        // device thread wait
-        sleep (2);
+    if (argc < 7)   get_device_info();
+
+    while (1)
+    {
+        did = OPT_DEVICE_ID + (OPT_ACTION * 10);
+
+        printf ("\n===> DEVICE TEST RESULT <===\n");
         ret = device_check (OPT_GROUP_ID, did, dev_resp);
 
         if (OPT_GROUP_ID < eGID_END) {
@@ -319,8 +348,7 @@ int main (int argc, char *argv[])
             // Serial msg
             make_msg (OPT_GROUP_ID, did, dev_resp);
         }
-
-        while (1)   sleep (1);
+        get_device_info();
     }
     return 0;
 }
