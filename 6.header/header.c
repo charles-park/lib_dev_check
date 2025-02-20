@@ -218,15 +218,18 @@ void header_grp_init (char *cfg)
                     switch (atoi(tok)) {
                         case eHEADER_40:
                             HEADER40[0] = NC;
-                            strncpy (HEADER40_CON, tok, strlen(tok));
+                            if ((tok = strtok (NULL, ",")) != NULL)
+                                strncpy (HEADER40_CON, tok, strlen(tok));
                             break;
                         case eHEADER_14:
                             HEADER14[0] = NC;
-                            strncpy (HEADER14_CON, tok, strlen(tok));
+                            if ((tok = strtok (NULL, ",")) != NULL)
+                                strncpy (HEADER14_CON, tok, strlen(tok));
                             break;
                         case eHEADER_7:
                             HEADER7 [0] = NC;
-                            strncpy (HEADER7_CON,  tok, strlen(tok));
+                            if ((tok = strtok (NULL, ",")) != NULL)
+                                strncpy (HEADER7_CON,  tok, strlen(tok));
                             break;
                         default :
                             printf ("%s : error! unknown did = %d\n", __func__, did);

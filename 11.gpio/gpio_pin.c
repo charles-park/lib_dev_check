@@ -131,6 +131,8 @@ void gpio_grp_init (char *cfg)
                     // gpio off value
                     if ((tok = strtok (NULL, ",")) != NULL)
                         DeviceGPIO[did].min = atoi(tok);
+
+                    gpio_export (DeviceGPIO[did].num);  gpio_direction (DeviceGPIO[did].num, 1);
                     break;
                 default :
                     printf ("%s : error! unknown did = %d\n", __func__, did);
