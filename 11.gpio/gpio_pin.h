@@ -21,15 +21,17 @@
 // Define the Device ID for the GPIO group.
 //------------------------------------------------------------------------------
 enum {
-    eGPIO_PIN,
-    eGPIO_PIN_END
+    eGPIO_ID0,
+    eGPIO_ID1,
+    eGPIO_END = 10,
 };
 
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int gpio_check     (int dev_id, char *resp);
-extern int gpio_grp_init  (void);
+extern int  gpio_data_check(int dev_id, int resp_i);
+extern int  gpio_check     (int dev_id, char *resp);
+extern void gpio_grp_init  (char *cfg);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

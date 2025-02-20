@@ -161,7 +161,7 @@ struct cmd_list list[eGID_END] = {
     { eGID_LED     , &gid_str[eGID_LED]     , &id_led_str[0]     , eLED_END      },
     { eGID_PWM     , &gid_str[eGID_PWM]     , &id_pwm_str[0]     , ePWM_END      },
     { eGID_IR      , &gid_str[eGID_IR]      , &id_ir_str[0]      , eIR_END       },
-    { eGID_GPIO    , &gid_str[eGID_GPIO]    , &id_gpio_str[0]    , eGPIO_PIN_END },
+    { eGID_GPIO    , &gid_str[eGID_GPIO]    , &id_gpio_str[0]    , eGPIO_END     },
     { eGID_FW      , &gid_str[eGID_FW]      , &id_fw_str[0]      , eFW_END       },
 };
 
@@ -274,7 +274,7 @@ static void parse_opts (int argc, char *argv[])
 //------------------------------------------------------------------------------
 void make_msg (int grp_id, int dev_id, char *dev_resp)
 {
-    char msg[SERIAL_RESP_SIZE];
+    char msg[SERIAL_RESP_SIZE +1];
 
     memset (msg, 0, sizeof(msg));
 

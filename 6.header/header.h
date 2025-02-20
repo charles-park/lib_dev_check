@@ -24,7 +24,7 @@
 //------------------------------------------------------------------------------
 // Define the Device ID for the HEADER group.
 //------------------------------------------------------------------------------
-#define eHEADER_CFG 9
+#define eHEADER_CFG -1
 enum {
     eHEADER_40,
     eHEADER_7,

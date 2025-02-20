@@ -192,7 +192,7 @@ int device_check (int gid, int did, char *dev_resp)
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-static int device_setup (void)
+int device_init (void)
 {
     FILE *pfd;
     char buf[STR_PATH_LENGTH] = {0,}, *ptr;
@@ -217,13 +217,13 @@ static int device_setup (void)
         if ((ptr = strstr (buf, "USB"))       != NULL)  usb_grp_init (buf);
         if ((ptr = strstr (buf, "HDMI"))      != NULL)  hdmi_grp_init (buf);
         if ((ptr = strstr (buf, "ADC"))       != NULL)  adc_grp_init (buf);
-
         if ((ptr = strstr (buf, "ETHERNET"))  != NULL)  ethernet_grp_init (buf);
         if ((ptr = strstr (buf, "HEADER"))    != NULL)  header_grp_init (buf);
         if ((ptr = strstr (buf, "AUDIO"))     != NULL)  audio_grp_init (buf);
         if ((ptr = strstr (buf, "LED"))       != NULL)  led_grp_init (buf);
-        if ((ptr = strstr (buf, "IR"))        != NULL)  ir_grp_init (buf);
         if ((ptr = strstr (buf, "PWM"))       != NULL)  pwm_grp_init (buf);
+        if ((ptr = strstr (buf, "IR"))        != NULL)  ir_grp_init (buf);
+        if ((ptr = strstr (buf, "GPIO"))      != NULL)  gpio_grp_init (buf);
 
         if ((ptr = strstr (buf, "FW"))   != NULL)
         {
@@ -232,40 +232,6 @@ static int device_setup (void)
     }
     fclose (pfd);
     return 1;
-}
-
-//------------------------------------------------------------------------------
-int device_init (void)
-{
-    #if 0
-    system_grp_init ();
-    // usb f/w upgrade check
-    fw_grp_init();
-    // iperf, ip, mac, check
-    ethernet_grp_init ();
-
-    // sysfile read
-    hdmi_grp_init ();
-    adc_grp_init ();
-
-    // thread func
-    ir_grp_init ();
-    storage_grp_init ();
-    usb_grp_init ();
-
-    // i2c ADC check
-    header_grp_init ();
-    // audio 1Khz L, R
-    audio_grp_init ();
-    // pwm1, pwm2
-    pwm_grp_init ();
-    // alive, power, eth_green, eth_orange
-    led_grp_init ();
-    // gpio number test
-    gpio_grp_init ();
-#endif
-
-    return device_setup ();
 }
 
 //------------------------------------------------------------------------------

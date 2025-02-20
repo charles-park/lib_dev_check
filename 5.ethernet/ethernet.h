@@ -21,7 +21,7 @@
 // Define the Device ID for the ETHERNET group.
 //------------------------------------------------------------------------------
 /* Ehternet default config */
-#define eETHERNET_CFG   9
+#define eETHERNET_CFG   -1
 
 enum {
     /* R = ip read, I = init value */
