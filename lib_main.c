@@ -328,7 +328,7 @@ int main (int argc, char *argv[])
         print_usage(argv[0]);
 
     // device thread wait
-    device_init (); sleep (2);
+    device_setup (); sleep (2);
 
     if (argc < 7)   get_device_info();
 

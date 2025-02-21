@@ -126,7 +126,7 @@ extern int  device_resp_parse   (const char *resp, parse_resp_data_t *pdata);
 extern int  device_resp_check   (parse_resp_data_t *pdata);
 //------------------------------------------------------------------------------
 extern int  device_check        (int gid, int did, char *resp);
-extern int  device_init         (void);
+extern int  device_setup        (void);
 
 //------------------------------------------------------------------------------
 #endif  // __LIB_DEV_TEST_H__

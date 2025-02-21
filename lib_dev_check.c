@@ -192,7 +192,7 @@ int device_check (int gid, int did, char *dev_resp)
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-int device_init (void)
+int device_setup (void)
 {
     FILE *pfd;
     char buf[STR_PATH_LENGTH] = {0,}, *ptr;
