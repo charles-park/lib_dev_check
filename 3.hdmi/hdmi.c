@@ -81,14 +81,6 @@ static int data_check (int id, const char *rdata)
 
     memset  (buf, 0, sizeof(buf));
     sprintf (buf, "%s", rdata);
-#if 0
-    if (id)
-        sprintf (buf, "%s", rdata);
-    else
-        sprintf (buf, "%02x%02x%02x%02x%02x%02x%02x%02x",
-            rdata[0], rdata[1], rdata[2], rdata[3],
-            rdata[4], rdata[5], rdata[6], rdata[7]);
-#endif
 
     if (!strncmp (buf, DeviceHDMI[id].pass_str, strlen (DeviceHDMI[id].pass_str)))
         return 1;
