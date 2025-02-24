@@ -121,7 +121,7 @@ static int usb_rw (struct device_usb *p_usb)
         sprintf (cmd, "find %s/ -name sd* 2>&1", p_usb->path);
 
         if ((fp = popen (cmd, "r")) != NULL) {
-            memset (rdata, 0x00, sizeof(cmd));
+            memset (rdata, 0x00, sizeof(rdata));
             // 1 line read
             fgets (rdata, sizeof(rdata), fp);
             pclose (fp);
