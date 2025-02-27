@@ -192,14 +192,14 @@ int device_check (int gid, int did, char *dev_resp)
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-int device_setup (void)
+int device_setup (const char *cfg_fname)
 {
     FILE *pfd;
     char buf[STR_PATH_LENGTH] = {0,}, *ptr;
 
     memset (buf, 0, sizeof(buf));
-    if (!find_file_path (CONFIG_FILE_NAME, buf)) {
-        printf ("%s : %s file not found!\n", __func__, CONFIG_FILE_NAME);
+    if (!find_file_path (cfg_fname, buf)) {
+        printf ("%s : %s file not found!\n", __func__, cfg_fname);
         return 0;
     }
 

@@ -38,6 +38,9 @@
 #if defined(__LIB_DEV_CHECK_APP__)
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
+#define CONFIG_FILE_NAME    "dev_check.cfg"
+
+//------------------------------------------------------------------------------
 const char *gid_str [] = {
     "SYSTEM",
     "STORAGE",
@@ -208,8 +211,10 @@ static void print_usage (const char *prog)
          "                    Action(2 = Link, PT2)\n"
          "                    Action(3 = PT3)\n"
          "\n"
-         "  e.g) system memory read.\n"
+         "  e.g) system memory read.(default cfg = dev_check.cfg)\n"
          "       lib_dev_test -g 0 -d 0 -a 0\n"
+         "       lib_dev_test -f {dev cfg file}\n"
+         "       lib_dev_test -f {dev cfg file} -g 0 -d 0 -a 0\n"
     );
     exit(1);
 }
@@ -221,6 +226,7 @@ static int  OPT_VIEW_INFO = 0;
 static int  OPT_GROUP_ID  = 0;
 static int  OPT_DEVICE_ID = 0;
 static int  OPT_ACTION    = 0;
+static char *OPT_CFG_FNAME = CONFIG_FILE_NAME;
 
 //------------------------------------------------------------------------------
 static void parse_opts (int argc, char *argv[])
@@ -231,11 +237,12 @@ static void parse_opts (int argc, char *argv[])
             { "device_id",  1, 0, 'd' },
             { "action"   ,  1, 0, 'a' },
             { "view"     ,  0, 0, 'v' },
+            { "cfg file" ,  1, 0, 'f' },
             { NULL, 0, 0, 0 },
         };
         int c;
 
-        c = getopt_long(argc, argv, "g:d:a:vh", lopts, NULL);
+        c = getopt_long(argc, argv, "g:d:a:vhf:", lopts, NULL);
 
         if (c == -1)
             break;
@@ -252,6 +259,9 @@ static void parse_opts (int argc, char *argv[])
             break;
         case 'v':
             OPT_VIEW_INFO = 1;
+            break;
+        case 'f':
+            OPT_CFG_FNAME = optarg;
             break;
         case 'h':
         default:
@@ -324,11 +334,11 @@ int main (int argc, char *argv[])
             printf ("\tDEVICE_ID(%d) = %s\n", i, *(list[OPT_GROUP_ID].id_str + i));
         puts("");
     }
-    if ((argc != 1) && argc < 7)
+    if ((argc != 1) && argc < 9)
         print_usage(argv[0]);
 
     // device thread wait
-    device_setup (); sleep (2);
+    device_setup (OPT_CFG_FNAME);   sleep (2);
 
     if (argc < 7)   get_device_info();
 
