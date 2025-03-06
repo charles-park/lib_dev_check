@@ -222,7 +222,7 @@ static int ethernet_server_ip (void)
     if (DeviceETHERNET.server_ip_int[0] != 0)   return 1;
 
     memset(cmd_line, 0, sizeof(cmd_line));
-    sprintf(cmd_line, "nmap %d.%d.%d.* -p T:%4d --open 2<&1",
+    sprintf(cmd_line, "nmap %d.%d.%d.* -p %4d -T5 --open 2<&1",
         DeviceETHERNET.board_ip_int[0],
         DeviceETHERNET.board_ip_int[1],
         DeviceETHERNET.board_ip_int[2],
