@@ -145,9 +145,12 @@ int device_resp_check (parse_resp_data_t *pdata)
         case eGID_HEADER:
             pdata->status_i = header_data_check (pdata->did, pdata->resp_s);
             break;
+        case eGID_AUDIO:
+            pdata->status_i = audio_data_check (pdata->did, pdata->resp_i);
+            break;
 
         /* not implement */
-        case eGID_PWM: case eGID_GPIO: case eGID_AUDIO:
+        case eGID_PWM: case eGID_GPIO:
         default:
             pdata->status_i = 0;
             break;

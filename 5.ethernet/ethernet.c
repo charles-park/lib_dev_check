@@ -222,7 +222,7 @@ static int ethernet_server_ip (void)
     if (DeviceETHERNET.server_ip_int[0] != 0)   return 1;
 
     memset(cmd_line, 0, sizeof(cmd_line));
-    sprintf(cmd_line, "nmap %d.%d.%d.* -p %4d -T5 --open 2<&1",
+    sprintf(cmd_line, "nmap %d.%d.%d.* -p T:%4d -T5 --open 2<&1",
         DeviceETHERNET.board_ip_int[0],
         DeviceETHERNET.board_ip_int[1],
         DeviceETHERNET.board_ip_int[2],
@@ -434,11 +434,25 @@ static void *thread_iperf3_func (void *arg)
 }
 
 //------------------------------------------------------------------------------
+void thread_iperf_stop (void)
+{
+    FILE *fp;
+    const char *cmd = "ps ax | grep iperf3 | awk '{print $1}' | xargs kill";
+
+    if ((fp = popen (cmd, "w")) != NULL)
+        pclose(fp);
+
+    ThreadRunning = 0;    usleep (100 *1000);
+}
+
+//------------------------------------------------------------------------------
 static int ethernet_iperf_check (char *resp)
 {
     int status = 0;
 
     if (DeviceETHERNET.board_ip_int[0] != 0) {
+        thread_iperf_stop ();
+
         if (!ThreadRunning && !DeviceETHERNET.iperf_speed)
             pthread_create (&thread_iperf3, NULL, thread_iperf3_func, (void *)&DeviceETHERNET);
 
