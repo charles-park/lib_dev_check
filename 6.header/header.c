@@ -152,11 +152,13 @@ int header_data_check (int dev_id, char *resp_s)
 
     for (i = 0; i < 20; i++) {
         switch (resp_s[i]) {
-            default :
             case '0': resp_pt [1 + (i*2)] = 0; resp_pt [2 + (i*2)] = 0; break;
             case '1': resp_pt [1 + (i*2)] = 1; resp_pt [2 + (i*2)] = 0; break;
             case '2': resp_pt [1 + (i*2)] = 0; resp_pt [2 + (i*2)] = 1; break;
             case '3': resp_pt [1 + (i*2)] = 1; resp_pt [2 + (i*2)] = 1; break;
+            default :
+                resp_pt [1 + (i*2)] = -1; resp_pt [2 + (i*2)] = -1;
+                break;
         }
     }
 
