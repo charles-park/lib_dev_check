@@ -72,6 +72,8 @@ static void usb_hub_reset (void)
 
     if ((fp = popen (cmd, "w")) != NULL)
         pclose(fp);
+
+    sleep (1);
 }
 
 //------------------------------------------------------------------------------
