@@ -448,7 +448,11 @@ void thread_iperf_stop (void)
 //------------------------------------------------------------------------------
 static int ethernet_iperf_check (char *resp)
 {
-    int status = 0;
+    static int status = 0;
+
+    if (status == -1) {
+        status = 0; DeviceETHERNET.iperf_speed = 0;
+    }
 
     if (DeviceETHERNET.board_ip_int[0] != 0) {
         thread_iperf_stop ();
@@ -460,7 +464,7 @@ static int ethernet_iperf_check (char *resp)
             status = (DeviceETHERNET.iperf_speed > DeviceETHERNET.iperf_check_speed) ? 1 : -1;
     }
 
-    if (status) DEVICE_RESP_FORM_INT(resp, 'P', DeviceETHERNET.iperf_speed);
+    if (status) DEVICE_RESP_FORM_INT(resp, (status == 1) ? 'P' : 'F', DeviceETHERNET.iperf_speed);
     else        DEVICE_RESP_FORM_STR(resp, 'C', DeviceETHERNET.board_ip_str);
 
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);

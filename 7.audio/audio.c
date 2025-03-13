@@ -113,9 +113,9 @@ int audio_data_check (int dev_id, int resp_i)
     switch (id) {
         case eAUDIO_LEFT: case eAUDIO_RIGHT:
             if (DEVICE_ACTION(dev_id))
-                status = (resp_i > DeviceAUDIO[id].max) ? 1 : 0;    // audio on
+                status = (resp_i < DeviceAUDIO[id].min) ? 1 : 0;    // audio on (low)
             else
-                status = (resp_i < DeviceAUDIO[id].min) ? 1 : 0;    // audio off
+                status = (resp_i > DeviceAUDIO[id].max) ? 1 : 0;    // audio off (high)
             break;
         default :
             status = 0;
