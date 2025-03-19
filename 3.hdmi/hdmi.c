@@ -42,6 +42,8 @@ struct device_hdmi {
     char path[STR_PATH_LENGTH +1];
     // compare value
     char pass_str[STR_PATH_LENGTH +1];
+    // edid value str
+    int is_str;
 };
 
 //------------------------------------------------------------------------------
@@ -55,8 +57,8 @@ struct device_hdmi {
 
 struct device_hdmi DeviceHDMI [eHDMI_END] = {
     // EDID
-    {{0,},{0,}},
-    {{0,},{0,}},
+    {{0,},{0,},0},
+    {{0,},{0,},0},
 };
 
 //------------------------------------------------------------------------------
@@ -80,7 +82,14 @@ static int data_check (int id, const char *rdata)
     char buf[HDMI_READ_BYTES+1];
 
     memset  (buf, 0, sizeof(buf));
-    sprintf (buf, "%s", rdata);
+
+    if (DeviceHDMI[id].is_str)
+        sprintf (buf, "%s", rdata);
+    else
+        sprintf (buf, "%02x%02x%02x%02x%02x%02x%02x%02x",
+            rdata [0], rdata [1], rdata [2], rdata [3],
+            rdata [4], rdata [5], rdata [6], rdata [7]
+        );
 
     if (!strncmp (buf, DeviceHDMI[id].pass_str, strlen (DeviceHDMI[id].pass_str)))
         return 1;
@@ -127,6 +136,8 @@ void hdmi_grp_init (char *cfg)
                         strncpy (DeviceHDMI[did].path, tok, strlen(tok));
                     if ((tok = strtok (NULL, ",")) != NULL)
                         strncpy (DeviceHDMI[did].pass_str, tok, strlen(tok));
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceHDMI[did].is_str = atoi(tok);
                     break;
                 default :
                     printf ("%s : error! unknown did = %d\n", __func__, did);
