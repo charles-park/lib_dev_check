@@ -345,9 +345,10 @@ int main (int argc, char *argv[])
             device_check (OPT_GROUP_ID, did, dev_resp) == 1 ? "PASS" : "FAIL");
 
         // Serial msg
-        make_msg (OPT_GROUP_ID, did, dev_resp);
+        make_msg (OPT_GROUP_ID, did, dev_resp); printf ("\n");
 
         // pause
+        sleep (1);
         printf ("\nPress [Enter] key to continue....");   get_int ();
         printf ("\n========================================================\n");
     }
