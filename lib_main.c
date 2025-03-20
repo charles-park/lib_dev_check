@@ -62,12 +62,11 @@ const char *action_str [] = {
     "Write, Set, PT1",
     "Link, PT2",
     "PT3",
-    "END"
 };
 
 //------------------------------------------------------------------------------
 const char *id_system_str[] = {
-    "MEM ",
+    "MEM",
     "FB_X",
     "FB_Y",
     "FB_SIZE",
@@ -204,17 +203,12 @@ static void print_usage (const char *prog)
          "Protocol)\n"
          "https://docs.google.com/spreadsheets/d/1igBObU7CnP6FRaRt-x46l5R77-8uAKEskkhthnFwtpY/edit?gid=719914769#gid=719914769\n"
          "\n"
-         "  -g --group id     Group ID(0~99)\n"
-         "  -d --device id    Device ID(0~9999)\n"
-         "  -a --action       Action(0 = Clear, Read, PT0)\n"
-         "                    Action(1 = Set, Write, PT1)\n"
-         "                    Action(2 = Link, PT2)\n"
-         "                    Action(3 = PT3)\n"
+         "  -f --dev_cfg      Device config file\n"
+         "  -h --help         show help\n"
          "\n"
-         "  e.g) system memory read.(default cfg = dev_check.cfg)\n"
-         "       lib_dev_test -g 0 -d 0 -a 0\n"
+         "  e.g) Default cfg = dev_check.cfg\n"
+         "       lib_dev_test \n"
          "       lib_dev_test -f {dev cfg file}\n"
-         "       lib_dev_test -f {dev cfg file} -g 0 -d 0 -a 0\n"
     );
     exit(1);
 }
@@ -222,7 +216,6 @@ static void print_usage (const char *prog)
 //------------------------------------------------------------------------------
 /* Control variable */
 //------------------------------------------------------------------------------
-static int  OPT_VIEW_INFO = 0;
 static int  OPT_GROUP_ID  = 0;
 static int  OPT_DEVICE_ID = 0;
 static int  OPT_ACTION    = 0;
@@ -233,33 +226,18 @@ static void parse_opts (int argc, char *argv[])
 {
     while (1) {
         static const struct option lopts[] = {
-            { "group"    ,  1, 0, 'g' },
-            { "device_id",  1, 0, 'd' },
-            { "action"   ,  1, 0, 'a' },
-            { "view"     ,  0, 0, 'v' },
             { "cfg file" ,  1, 0, 'f' },
+            { "help    " ,  0, 0, 'h' },
             { NULL, 0, 0, 0 },
         };
         int c;
 
-        c = getopt_long(argc, argv, "g:d:a:vhf:", lopts, NULL);
+        c = getopt_long(argc, argv, "hf:", lopts, NULL);
 
         if (c == -1)
             break;
 
         switch (c) {
-        case 'g':
-            OPT_GROUP_ID = atoi(optarg);
-            break;
-        case 'd':
-            OPT_DEVICE_ID = atoi(optarg);
-            break;
-        case 'a':
-            OPT_ACTION = atoi(optarg);
-            break;
-        case 'v':
-            OPT_VIEW_INFO = 1;
-            break;
         case 'f':
             OPT_CFG_FNAME = optarg;
             break;
@@ -308,57 +286,70 @@ int get_int (void)
 }
 
 //------------------------------------------------------------------------------
+int show_list (const char *lists[], int list_cnt)
+{
+    int i;
+    for (i = 0; i < list_cnt; i++) {
+        if (i && !(i % 3))  printf ("\n");
+
+        printf ("%d. %-14s\t", i, lists[i]);
+    }
+    printf ("\n");
+    return list_cnt ? (list_cnt - 1) : 0;
+}
+
+//------------------------------------------------------------------------------
 void get_device_info (void)
 {
-    printf ("\n\n==> TEST DEVICE INFO <===\n");
-    printf ("* GROUP_ID  = "); OPT_GROUP_ID  = get_int();
-    printf ("* DEVICE_ID = "); OPT_DEVICE_ID = get_int();
-    printf ("* ACTION    = "); OPT_ACTION    = get_int();
-    printf ("\n");
+    system("clear");
+    printf ("*** SELECT TEST ITEM (%s) ***\n", OPT_CFG_FNAME);
+    printf ("\n[ SELECT GROUP ]\n");
+    printf ("* GROUP_ID [0 - %d] = ", show_list(gid_str, sizeof(gid_str)/sizeof(gid_str[0])));
+    OPT_GROUP_ID  = get_int();
+
+    printf ("\n[ SELECT DEVICE ]\n");
+    printf ("* DEVICE_ID[0 - %d] = ", show_list(list[OPT_GROUP_ID].id_str, list[OPT_GROUP_ID].id_cnt));
+    OPT_DEVICE_ID = get_int();
+
+    printf ("\n[ SELECT ACTION ]\n");
+    printf ("* ACTION[0 - %d]    = ", show_list(action_str, sizeof(action_str)/sizeof(action_str[0])));
+    OPT_ACTION    = get_int();
+
 }
 
 //------------------------------------------------------------------------------
 int main (int argc, char *argv[])
 {
-    int ret, did;
+    int did;
     char dev_resp [DEVICE_RESP_SIZE];
 
     parse_opts(argc, argv);
 
-    // Display cmd list
-    if (OPT_VIEW_INFO) {
-        int i;
-        puts("");
-        printf ("GROUP_ID(%d) = %s\n", OPT_GROUP_ID, *list[OPT_GROUP_ID].g_str);
-        for (i = 0; i < list[OPT_GROUP_ID].id_cnt; i++)
-            printf ("\tDEVICE_ID(%d) = %s\n", i, *(list[OPT_GROUP_ID].id_str + i));
-        puts("");
-    }
-    if ((argc != 1) && argc < 9)
-        print_usage(argv[0]);
-
     // device thread wait
     device_setup (OPT_CFG_FNAME);   sleep (2);
 
-    if (argc < 7)   get_device_info();
-
     while (1)
     {
-        did = OPT_DEVICE_ID + (OPT_ACTION * 10);
-
-        printf ("\n===> DEVICE TEST RESULT <===\n");
-        ret = device_check (OPT_GROUP_ID, did, dev_resp);
-
-        if (OPT_GROUP_ID < eGID_END) {
-            printf ("GROUP_ID(%d) = %s, DEVICE_ID(%d) = %s, ACTION(%s), ret = %d\n",
-                OPT_GROUP_ID, *list[OPT_GROUP_ID].g_str,
-                DEVICE_ID(did), *(list[OPT_GROUP_ID].id_str + DEVICE_ID(did)),
-                action_str [DEVICE_ACTION(did)],
-                ret);
-            // Serial msg
-            make_msg (OPT_GROUP_ID, did, dev_resp);
-        }
         get_device_info();
+
+        printf ("\n========================================================\n");
+        printf ("\n[ ** TEST ITEM INFO ** ]\n");
+        printf ("GID = %d (%s), DID = %d (%s), ACTION = %d (%s)\n\n",
+            OPT_GROUP_ID , gid_str[OPT_GROUP_ID],
+            OPT_DEVICE_ID, list[OPT_GROUP_ID].id_str[OPT_DEVICE_ID],
+            OPT_ACTION   , action_str[OPT_ACTION]
+        );
+
+        did = OPT_DEVICE_ID + (OPT_ACTION * 10);
+        printf ("\n===> TEST ITEM RESULT (ret = %s) <===\n",
+            device_check (OPT_GROUP_ID, did, dev_resp) == 1 ? "PASS" : "FAIL");
+
+        // Serial msg
+        make_msg (OPT_GROUP_ID, did, dev_resp);
+
+        // pause
+        printf ("\nPress [Enter] key to continue....");   get_int ();
+        printf ("\n========================================================\n");
     }
     return 0;
 }
