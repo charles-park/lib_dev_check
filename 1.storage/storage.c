@@ -3,8 +3,8 @@
  * @file storage.c
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-19
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -38,54 +38,50 @@
 
 //------------------------------------------------------------------------------
 struct device_storage {
+    int boot_device;
+
     // Control path
     char path [STR_PATH_LENGTH +1];
-    // compare value (read min, write min : MB/s)
-    int r_min, w_min;
 
-    // read value
-    int value;
+    // compare value (read min, write min : MB/s)
+    int rw_check[2];
+
+    // read/write value
+    int rw_value[2];
+
+    // r/w mode(0 = read, 1 = write)
+    int rw;
+
+    // r/w thread
+    int thread_en;
+    pthread_t thread;
 };
 
-/* Device default r/w speed (MB/s) */
-#define DEFAULT_EMMC_R  140
-#define DEFAULT_EMMC_W  70
-
-#define DEFAULT_uSD_R   50
-#define DEFAULT_uSD_W   20
-
-#define DEFAULT_SATA_R  250
-#define DEFAULT_SATA_W  150
-
-#define DEFAULT_NVME_R  250
-#define DEFAULT_NVME_W  150
+pthread_mutex_t mutex_storage = PTHREAD_MUTEX_INITIALIZER;
 
 //------------------------------------------------------------------------------
 //
 // Configuration
 //
 //------------------------------------------------------------------------------
-/* define storage devices */
-//------------------------------------------------------------------------------
-// Boot device define (uSD)
-#define BOOT_DEVICE     eSTORAGE_uSD
-#define TEMP_FILE       "/tmp/wdat"
-
 struct device_storage DeviceSTORAGE [eSTORAGE_END] = {
-    // path, r_min(MB/s), w_min(MB/s), read
+    // init, boot_device, path, rw_check, rw_value, rw_mode, thread_en, pthread,
     // eSTORAGE_EMMC
-    { "/dev/mmcblk0", DEFAULT_EMMC_R, DEFAULT_EMMC_W,   0 },
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
     // eSTORAGE_uSD (boot device : /root)
-    { "/dev/mmcblk1",  DEFAULT_uSD_R,  DEFAULT_uSD_R,   0 },
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
     // eSTORAGE_SATA
-    {            " ", DEFAULT_SATA_R, DEFAULT_SATA_R,   0 },
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
     // eSTORAGE_NVME
-    { "/dev/nvme0n1", DEFAULT_NVME_R, DEFAULT_NVME_R,   0 },
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
 };
 
+//------------------------------------------------------------------------------
+#define TEMP_FILE       "/tmp/wdat"
+
 // Storage Read / Write (16 Mbytes, 1 block count)
-#define STORAGE_R_CHECK "dd of=/dev/null bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync if="
-#define STORAGE_W_CHECK "dd if=/dev/zero bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync of="
+const char *STORAGE_R_CHECK = "dd of=/dev/null bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync if=";
+const char *STORAGE_W_CHECK = "dd if=/dev/zero bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync of=";
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -107,158 +103,125 @@ static int remove_tmp (const char *path)
 }
 
 //------------------------------------------------------------------------------
-static int storage_rw (const char *path, const char *check_cmd)
+static int storage_rw (struct device_storage *p_storage)
 {
     FILE *fp;
-    char cmd[STR_PATH_LENGTH], rdata[STR_PATH_LENGTH], *ptr;
+    char cmd[STR_PATH_LENGTH *2], rdata[STR_PATH_LENGTH], *ptr;
 
-    memset  (cmd, 0x00, sizeof(cmd));
-    sprintf (cmd, "%s%s 2>&1", check_cmd, path);
+    if (!access (p_storage->path, F_OK)) {
+        memset  (cmd, 0x00, sizeof(cmd));
+        if (p_storage->rw) {
+            sprintf (cmd, "%s%s 2>&1 && sync",
+                STORAGE_W_CHECK, p_storage->boot_device ? TEMP_FILE : p_storage->path);
 
-    if ((fp = popen (cmd, "r")) != NULL) {
-        while (fgets (rdata, sizeof(rdata), fp) != NULL) {
-            if ((ptr = strstr (rdata, " MB/s")) != NULL) {
-                while (*ptr != ',') ptr--;
-                return atoi (ptr+1);
-            }
+        } else {
+            sprintf (cmd, "%s%s 2>&1 && sync",
+                STORAGE_R_CHECK, p_storage->path);
         }
-        pclose(fp);
+
+        if ((fp = popen (cmd, "r")) != NULL) {
+            while (fgets (rdata, sizeof(rdata), fp) != NULL) {
+                if ((ptr = strstr (rdata, " MB/s")) != NULL) {
+                    while (*ptr != ',') ptr--;
+                    pclose(fp);
+                    return atoi (ptr+1);
+                }
+            }
+            pclose(fp);
+        }
+        return 0;
     }
-    return 0;
+    return -1;
 }
 
 //------------------------------------------------------------------------------
-int storage_check (int id, char action, char *resp)
+static void *thread_func_storage (void *arg)
 {
-    int value = 0, status = 0;
+    struct device_storage *p_storage = (struct device_storage *)arg;
+    int retry = 5;
 
-    if ((id >= eSTORAGE_END) || (access (DeviceSTORAGE[id].path, R_OK) != 0)) {
-        sprintf (resp, "%06d", 0);
-        return 0;
+    p_storage->thread_en = 1;
+    while (retry--) {
+        pthread_mutex_lock(&mutex_storage);
+
+        if (p_storage->rw_value[p_storage->rw] <= p_storage->rw_check[p_storage->rw])
+            p_storage->rw_value[p_storage->rw] = storage_rw (p_storage);
+
+        pthread_mutex_unlock(&mutex_storage);
+
+        if (p_storage->rw_value[p_storage->rw] > p_storage->rw_check[p_storage->rw])
+            break;
+
+        usleep (100 * 1000);
     }
+    p_storage->thread_en = 0;
+    return arg;
+}
 
-    switch (action) {
-        case 'I':   case 'R':
-            if (action == 'I')
-                value = DeviceSTORAGE[id].value;
-            else
-                value = storage_rw (DeviceSTORAGE[id].path, STORAGE_R_CHECK);
+//------------------------------------------------------------------------------
+int storage_check (int dev_id, char *resp)
+{
+    int value = 0, status = 0, id = DEVICE_ID(dev_id);
+    struct device_storage *p_storage = &DeviceSTORAGE[id];
 
-            status = (value < DeviceSTORAGE[id].r_min) ? 0 : 1;
-            break;
-        case 'W':
-            /* boot device의 경우 /dev/node를 바로 r/w할 수 없기 때문. */
-            /* tmp파일을 생성하는데 걸리는 시간을 측정함. */
-            if (id == BOOT_DEVICE) {
-                value = storage_rw (TEMP_FILE, STORAGE_W_CHECK);
+    switch (id) {
+        case eSTORAGE_eMMC: case eSTORAGE_uSD:
+        case eSTORAGE_SATA: case eSTORAGE_NVME:
+
+            do { usleep (100 * 1000); } while (p_storage->thread_en);
+
+            p_storage->rw = DEVICE_ACTION(dev_id);
+
+            pthread_create (&p_storage->thread, NULL,
+                                thread_func_storage, p_storage);
+
+            do { usleep (100 * 1000); } while (p_storage->thread_en);
+
+            if (p_storage->rw && p_storage->boot_device)
                 remove_tmp (TEMP_FILE);
-            }
-            else
-                value = storage_rw (DeviceSTORAGE[id].path, STORAGE_W_CHECK);
 
-            status = (value < DeviceSTORAGE[id].w_min) ? 0 : 1;
-            break;
-        case 'L':
+            value  = p_storage->rw_value[p_storage->rw];
+            status = (value > p_storage->rw_check[p_storage->rw]) ? 1 : -1;
             break;
         default :
             break;
     }
-    sprintf (resp, "%06d", value);
+    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;
 }
 
 //------------------------------------------------------------------------------
-static void default_config_write (const char *fname)
+void storage_grp_init (char *cfg)
 {
-    FILE *fp;
-    char value [STR_PATH_LENGTH *2 +1];
+    char *tok;
+    int did;
 
-    if ((fp = fopen(fname, "wt")) == NULL)
-        return;
+    if ((tok = strtok (cfg, ",")) != NULL) {
+        if ((tok = strtok (NULL, ",")) != NULL) {
+            did = atoi(tok);
+            switch (did) {
+                case eSTORAGE_eMMC: case eSTORAGE_uSD:
+                case eSTORAGE_SATA: case eSTORAGE_NVME:
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DeviceSTORAGE[did].path, tok, strlen(tok));
 
-    // default value write
-    fputs   ("# info : dev_id, dev_node, rd_speed, wr_speed \n", fp);
-    memset  (value, 0, STR_PATH_LENGTH *2);
-    sprintf (value, "%d,%s,%d,%d,\n",
-        eSTORAGE_eMMC, DeviceSTORAGE[eSTORAGE_eMMC].path, DEFAULT_EMMC_R, DEFAULT_EMMC_W);
-    fputs   (value, fp);
-    memset  (value, 0, STR_PATH_LENGTH *2);
-    sprintf (value, "%d,%s,%d,%d,\n",
-        eSTORAGE_uSD,  DeviceSTORAGE[eSTORAGE_uSD].path, DEFAULT_uSD_R, DEFAULT_uSD_W);
-    fputs   (value, fp);
-    memset  (value, 0, STR_PATH_LENGTH *2);
-    sprintf (value, "%d,%s,%d,%d,\n",
-        eSTORAGE_SATA, DeviceSTORAGE[eSTORAGE_SATA].path, DEFAULT_SATA_R, DEFAULT_SATA_W);
-    fputs   (value, fp);
-    memset  (value, 0, STR_PATH_LENGTH *2);
-    sprintf (value, "%d,%s,%d,%d,\n",
-        eSTORAGE_NVME, DeviceSTORAGE[eSTORAGE_NVME].path, DEFAULT_NVME_R, DEFAULT_NVME_W);
-    fputs   (value, fp);
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceSTORAGE[did].rw_check[0] = atoi(tok);
 
-    // file close
-    fclose  (fp);
-}
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceSTORAGE[did].rw_check[1] = atoi(tok);
 
-//------------------------------------------------------------------------------
-static void default_config_read (void)
-{
-    FILE *fp;
-    char fname [STR_PATH_LENGTH +1], value [STR_PATH_LENGTH +1], *ptr;
-    int dev_id;
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceSTORAGE[did].boot_device = atoi(tok);
+                    break;
 
-    memset  (fname, 0, STR_PATH_LENGTH);
-    sprintf (fname, "%sjig-%s.cfg", CONFIG_FILE_PATH, "storage");
-
-    if (access (fname, R_OK) != 0) {
-        default_config_write (fname);
-        return;
-    }
-
-    if ((fp = fopen(fname, "r")) == NULL)
-        return;
-
-    while(1) {
-        memset (value , 0, STR_PATH_LENGTH);
-        if (fgets (value, sizeof (value), fp) == NULL)
-            break;
-
-        switch (value[0]) {
-            case '#':   case '\n':
-                break;
-            default :
-                // default value write
-                // fputs   ("# info : dev_id, dev_node, rd_speed, wr_speed \n", fp);
-                if ((ptr = strtok (value, ",")) != NULL) {
-                    dev_id = atoi (ptr);
-                    if ((ptr = strtok ( NULL, ",")) != NULL) {
-                        memset (DeviceSTORAGE[dev_id].path, 0, STR_PATH_LENGTH);
-                        strcpy (DeviceSTORAGE[dev_id].path, ptr);
-                    }
-                    if ((ptr = strtok ( NULL, ",")) != NULL)
-                       DeviceSTORAGE[dev_id].r_min = atoi (ptr);
-                    if ((ptr = strtok ( NULL, ",")) != NULL)
-                       DeviceSTORAGE[dev_id].w_min = atoi (ptr);
-                }
-                break;
+                default :
+                    printf ("%s : error! unknown did = %d\n", __func__, did);
+                    break;
+            }
         }
     }
-    fclose(fp);
-}
-
-//------------------------------------------------------------------------------
-int storage_grp_init (void)
-{
-    int i;
-
-    default_config_read ();
-
-    for (i = 0; i < eSTORAGE_END; i++) {
-        if ((access (DeviceSTORAGE[i].path, R_OK)) == 0)
-            DeviceSTORAGE[i].value =
-                storage_rw (DeviceSTORAGE[i].path, STORAGE_R_CHECK);
-    }
-
-    return 1;
 }
 
 //------------------------------------------------------------------------------

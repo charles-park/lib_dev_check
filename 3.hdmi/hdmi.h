@@ -3,8 +3,8 @@
  * @file hdmi.h
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-20
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -29,8 +29,8 @@ enum {
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int hdmi_check     (int id, char action, char *resp);
-extern int hdmi_grp_init  (void);
+extern int  hdmi_check      (int dev_id, char *resp);
+extern void hdmi_grp_init   (char *cfg);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

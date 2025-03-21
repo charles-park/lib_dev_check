@@ -31,8 +31,9 @@ enum {
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int pwm_check     (int id, char action, char *resp);
-extern int pwm_grp_init  (void);
+extern int  pwm_data_check  (int dev_id, int resp_i);
+extern int  pwm_check       (int dev_id, char *resp);
+extern void pwm_grp_init    (char *cfg);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

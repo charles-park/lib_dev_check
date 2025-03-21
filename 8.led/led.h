@@ -3,8 +3,8 @@
  * @file led.h
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-21
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -20,17 +20,22 @@
 //------------------------------------------------------------------------------
 // Define the Device ID for the LED group.
 //------------------------------------------------------------------------------
+#define eLED_CFG    -1
+
 enum {
     eLED_POWER,
     eLED_ALIVE,
+    eLED_100M,  // ethrenet green
+    eLED_1G,    // ethrenet orange
     eLED_END
 };
 
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int led_check     (int id, char action, char *resp);
-extern int led_grp_init  (void);
+extern int  led_data_check(int dev_id, int resp_i);
+extern int  led_check     (int dev_id, char *resp);
+extern void led_grp_init  (char *cfg);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

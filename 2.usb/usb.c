@@ -3,8 +3,8 @@
  * @file usb.c
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-20
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -38,48 +38,57 @@
 
 //------------------------------------------------------------------------------
 struct device_usb {
+    // Link speed
+    int speed;
     // Control path
     char path[STR_PATH_LENGTH +1];
     // compare value (read min, write min : MB/s)
-    int r_min, w_min;
-    // Link speed
-    int speed;
+    int rw_check[2];
+    // r/w value
+    int rw_value[2];
 
-    // read value (Init)
-    int value;
+    // r/w mode
+    int rw;
+
+    // r/w thread
+    int thread_en;
+    pthread_t thread;
 };
 
-// default link speed, read/write (MB/s)
-#define DEFAULT_USB30_L 5000
-#define DEFAULT_USB30_R 100
-#define DEFAULT_USB30_W 35
-
-#define DEFAULT_USB20_L 480
-#define DEFAULT_USB20_R 25
-#define DEFAULT_USB20_W 20
+pthread_mutex_t mutex_usb = PTHREAD_MUTEX_INITIALIZER;
 
 //------------------------------------------------------------------------------
 //
-// Configuration
+// Configuration (ODROID-C5)
 //
 //------------------------------------------------------------------------------
-/* define usb devices (USB3.0 eMMC reader with eMMC) */
+//           ------------  ------------
+//           | USB_L_UP |  | USB_R_UP |
+//  -------  |-----------  ------------               -----------
+//  | ETH |  | USB_L_DN |  | USB_R_DN |               | USB-OTG |
+//  -------  ------------  ------------               -----------
 //------------------------------------------------------------------------------
 struct device_usb DeviceUSB [eUSB_END] = {
-    // path, r_min(MB/s), w_min(MB/s), link, read
-    // eUSB_30, USB 3.0
-    { "/sys/bus/usb/devices/8-1", DEFAULT_USB30_R, DEFAULT_USB30_W, DEFAULT_USB30_L, 0 },
-    // eUSB_20, USB 2.0
-    { "/sys/bus/usb/devices/2-1", DEFAULT_USB20_R, DEFAULT_USB20_W, DEFAULT_USB20_L, 0 },
-    // eUSB_OTG, USB OTG (Micro USB)
-    { "/sys/bus/usb/devices/5-1", DEFAULT_USB20_R, DEFAULT_USB20_W, DEFAULT_USB20_L, 0 },
-    // eUSB_EXTRA, Extra 14 Pin Header (USB2.0)
-    { "/sys/bus/usb/devices/1-1", DEFAULT_USB20_R, DEFAULT_USB20_W, DEFAULT_USB20_L, 0 },
+    // init, speed, path, rw_check, rw_value, rw_mode, thread_en, pthread,
+    // USB0-OTG
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    // USB1 - USB_L_DN
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    // USB2 - USB_L_UP
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    // USB3 - USB_R_DN
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    // USB4 - USB_R_UP
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
+    // USB5
+    { 0, {0, }, {0, 0}, {0, 0}, 0, 0, 0} ,
 };
 
+//------------------------------------------------------------------------------
 // USB Read / Write (16 Mbytes, 1 block count)
-#define USB_R_CHECK "dd of=/dev/null bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync if=/dev/"
-#define USB_W_CHECK "dd if=/dev/zero bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync of=/dev/"
+//------------------------------------------------------------------------------
+const char *USB_R_CHECK = "dd of=/dev/null bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync if=/dev/";
+const char *USB_W_CHECK = "dd if=/dev/zero bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync of=/dev/";
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -102,168 +111,140 @@ static int usb_speed (const char *path)
 }
 
 //------------------------------------------------------------------------------
-static int usb_rw (const char *path, const char *check_cmd)
+static int usb_rw (struct device_usb *p_usb)
 {
     FILE *fp;
-    char cmd[STR_PATH_LENGTH], rdata[STR_PATH_LENGTH], *ptr;
+    char cmd[STR_PATH_LENGTH*2], rdata[STR_PATH_LENGTH], *ptr;
 
-    memset  (cmd, 0x00, sizeof(cmd));
-    sprintf (cmd, "find %s/ -name sd* 2>&1", path);
+    if (!access (p_usb->path, F_OK)) {
+        memset  (cmd, 0x00, sizeof(cmd));
+        sprintf (cmd, "find %s/ -name sd* 2>&1", p_usb->path);
 
-    if ((fp = popen (cmd, "r")) != NULL) {
-        memset (rdata, 0x00, sizeof(cmd));
-        // 1 line read
-        fgets (rdata, sizeof(rdata), fp);
-        fclose (fp);
-        // find string "sd"
-        if ((ptr = strstr (rdata, "sd")) != NULL) {
-            memset  (cmd, 0, sizeof (cmd));
-            // 0x00 -> 0x20 (space)
-            ptr[strlen(ptr)-1] = ' ';
-            sprintf (cmd, "%s%s 2>&1", check_cmd, ptr);
+        if ((fp = popen (cmd, "r")) != NULL) {
+            memset (rdata, 0x00, sizeof(rdata));
+            // 1 line read
+            fgets (rdata, sizeof(rdata), fp);
+            pclose (fp);
 
-            if ((fp = popen(cmd, "r")) != NULL) {
-                while (1) {
-                    memset (rdata, 0, sizeof (rdata));
-                    if ((fgets (rdata, sizeof (rdata), fp)) == NULL)
-                        break;
-                    if ((ptr = strstr (rdata, " MB/s")) != NULL) {
-                        while (*ptr != ',') ptr--;
-                        return atoi (ptr+1);
+            // find string "sd"
+            if ((ptr = strstr (rdata, "sd")) != NULL) {
+                memset  (cmd, 0, sizeof (cmd));
+                // 0x00 -> 0x20 (space)
+                ptr[strlen(ptr)-1] = ' ';
+                sprintf (cmd, "%s%s 2>&1",
+                    p_usb->rw ? USB_W_CHECK : USB_R_CHECK, ptr);
+
+                if ((fp = popen(cmd, "r")) != NULL) {
+                    while (1) {
+                        memset (rdata, 0, sizeof (rdata));
+                        if ((fgets (rdata, sizeof (rdata), fp)) == NULL)
+                            break;
+                        if ((ptr = strstr (rdata, " MB/s")) != NULL) {
+                            while (*ptr != ',') ptr--;
+                            pclose (fp);
+                            return atoi (ptr+1);
+                        }
                     }
+                    pclose (fp);
                 }
-                pclose (fp);
             }
         }
+        return 0;
     }
-    return 0;
+    return -1;
 }
 
 //------------------------------------------------------------------------------
-int usb_check (int id, char action, char *resp)
+//------------------------------------------------------------------------------
+void *thread_func_usb (void *arg)
 {
-    int value = 0, status = 0;
+    struct device_usb *p_usb = (struct device_usb *)arg;
+    int retry = 5;
 
-    if ((id >= eUSB_END) || ((access (DeviceUSB[id].path, R_OK)) != 0)) {
-        sprintf (resp, "%06d", 0);
-        return 0;
+    p_usb->thread_en = 1;
+    while (retry--) {
+        pthread_mutex_lock(&mutex_usb);
+
+        if (p_usb->rw_value[p_usb->rw] <= p_usb->rw_check[p_usb->rw])
+            p_usb->rw_value[p_usb->rw] = usb_rw (p_usb);
+
+        pthread_mutex_unlock(&mutex_usb);
+
+        if (p_usb->rw_value[p_usb->rw] > p_usb->rw_check[p_usb->rw])
+            break;
+
+        usleep (100 * 1000);
     }
+    p_usb->thread_en = 0;
+    return arg;
+}
 
-    switch (action) {
-        case 'I':
-        case 'R':
-            value  = (action == 'I') ?
-                    DeviceUSB[id].value : usb_rw (DeviceUSB[id].path, USB_R_CHECK);
-            status = (value < DeviceUSB[id].r_min) ? 0 : 1;
-            break;
-        case 'W':
-            value  = usb_rw (DeviceUSB[id].path, USB_W_CHECK);
-            status = (value < DeviceUSB[id].w_min) ? 0 : 1;
-            break;
-        case 'L':
-            value  = usb_speed (DeviceUSB[id].path);
-            status = (value != DeviceUSB[id].speed) ? 0 : 1;
+//------------------------------------------------------------------------------
+int usb_check (int dev_id, char *resp)
+{
+    int value = 0, status = 0, id = DEVICE_ID(dev_id);
+    struct device_usb *p_usb = &DeviceUSB[id];
+
+    switch (id) {
+        case eUSB_0: case eUSB_1: case eUSB_2:
+        case eUSB_3: case eUSB_4: case eUSB_5:
+
+            if ((DEVICE_ACTION(dev_id) == 0) || (DEVICE_ACTION(dev_id) == 1)) {
+                do { usleep (100 * 1000); } while (p_usb->thread_en);
+
+                p_usb->rw = DEVICE_ACTION(dev_id);
+
+                pthread_create (&p_usb->thread, NULL,
+                                    thread_func_usb, p_usb);
+
+                do { usleep (100 * 1000); } while (p_usb->thread_en);
+
+                value  = p_usb->rw_value[p_usb->rw];
+                status = (value > p_usb->rw_check[p_usb->rw]) ? 1 : -1;
+            } else {
+                value  = usb_speed (p_usb->path);
+                status = (value == p_usb->speed) ? 1 : -1;
+            }
             break;
         default :
             break;
     }
-    sprintf (resp, "%06d", value);
+    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;
 }
 
 //------------------------------------------------------------------------------
-static void default_config_write (const char *fname)
+void usb_grp_init (char *cfg)
 {
-    FILE *fp;
-    char value [STR_PATH_LENGTH *2 +1];
+    char *tok;
+    int did;
 
-    if ((fp = fopen(fname, "wt")) == NULL)
-        return;
+    if ((tok = strtok (cfg, ",")) != NULL) {
+        if ((tok = strtok (NULL, ",")) != NULL) {
+            did = atoi(tok);
+            switch (did) {
+                case eUSB_0: case eUSB_1: case eUSB_2:
+                case eUSB_3: case eUSB_4: case eUSB_5:
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DeviceUSB[did].path, tok, strlen(tok));
 
-    // default value write
-    fputs   ("# info : dev_id, dev_node, rd_speed, wr_speed, link_speed \n", fp);
-    memset  (value, 0, sizeof(value));
-    sprintf (value, "%d,%s,%d,%d,%d,\n",
-        eUSB_30, DeviceUSB [eUSB_30].path, DEFAULT_USB30_R, DEFAULT_USB30_W, DEFAULT_USB30_L);
-    fputs   (value, fp);
-    memset  (value, 0, sizeof(value));
-    sprintf (value, "%d,%s,%d,%d,%d,\n",
-        eUSB_20, DeviceUSB [eUSB_20].path, DEFAULT_USB20_R, DEFAULT_USB20_W, DEFAULT_USB20_L);
-    fputs   (value, fp);
-    memset  (value, 0, sizeof(value));
-    sprintf (value, "%d,%s,%d,%d,%d,\n",
-        eUSB_OTG, DeviceUSB [eUSB_OTG].path, DEFAULT_USB20_R, DEFAULT_USB20_W, DEFAULT_USB20_L);
-    fputs   (value, fp);
-    memset  (value, 0, sizeof(value));
-    sprintf (value, "%d,%s,%d,%d,%d,\n",
-        eUSB_EXTRA, DeviceUSB [eUSB_EXTRA].path, DEFAULT_USB20_R, DEFAULT_USB20_W, DEFAULT_USB20_L);
-    fputs   (value, fp);
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceUSB[did].rw_check[0] = atoi(tok);
 
-    // file close
-    fclose  (fp);
-}
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceUSB[did].rw_check[1] = atoi(tok);
 
-//------------------------------------------------------------------------------
-static void default_config_read (void)
-{
-    FILE *fp;
-    char fname [STR_PATH_LENGTH +1], value [STR_PATH_LENGTH +1], *ptr;
-    int dev_id;
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceUSB[did].speed = atoi(tok);
+                    break;
 
-    memset  (fname, 0, STR_PATH_LENGTH);
-    sprintf (fname, "%sjig-%s.cfg", CONFIG_FILE_PATH, "usb");
-
-    if (access (fname, R_OK) != 0) {
-        default_config_write (fname);
-        return;
-    }
-
-    if ((fp = fopen(fname, "r")) == NULL)
-        return;
-
-    while(1) {
-        memset (value , 0, STR_PATH_LENGTH);
-        if (fgets (value, sizeof (value), fp) == NULL)
-            break;
-
-        switch (value[0]) {
-            case '#':   case '\n':
-                break;
-            default :
-                // default value write
-                // fputs   ("# info : dev_id, dev_node, rd_speed, wr_speed, link_speed \n", fp);
-                if ((ptr = strtok (value, ",")) != NULL) {
-                    dev_id = atoi (ptr);
-                    if ((ptr = strtok ( NULL, ",")) != NULL) {
-                        memset (DeviceUSB[dev_id].path, 0, STR_PATH_LENGTH);
-                        strcpy (DeviceUSB[dev_id].path, ptr);
-                    }
-                    if ((ptr = strtok ( NULL, ",")) != NULL)
-                       DeviceUSB[dev_id].r_min  = atoi (ptr);
-                    if ((ptr = strtok ( NULL, ",")) != NULL)
-                       DeviceUSB[dev_id].w_min  = atoi (ptr);
-                    if ((ptr = strtok ( NULL, ",")) != NULL)
-                       DeviceUSB[dev_id].speed = atoi (ptr);
-                }
-                break;
+                default :
+                    printf ("%s : error! unknown did = %d\n", __func__, atoi(tok));
+                    break;
+            }
         }
     }
-    fclose(fp);
-}
-
-//------------------------------------------------------------------------------
-int usb_grp_init (void)
-{
-    int i;
-
-    default_config_read ();
-
-    for (i = 0; i < eUSB_END; i++) {
-        if ((access (DeviceUSB[i].path, R_OK)) == 0)
-            DeviceUSB[i].value = usb_rw (DeviceUSB[i].path, USB_R_CHECK);
-    }
-
-    return 1;
 }
 
 //------------------------------------------------------------------------------

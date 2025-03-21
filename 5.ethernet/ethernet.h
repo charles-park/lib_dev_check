@@ -3,8 +3,8 @@
  * @file ehternet.h
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-20
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -20,6 +20,9 @@
 //------------------------------------------------------------------------------
 // Define the Device ID for the ETHERNET group.
 //------------------------------------------------------------------------------
+/* Ehternet default config */
+#define eETHERNET_CFG   -1
+
 enum {
     /* R = ip read, I = init value */
     eETHERNET_IP = 0,
@@ -29,17 +32,21 @@ enum {
     eETHERNET_IPERF,
     /* S = eth 1G setting, C = eth 100M setting, I = init valuue, R = read link speed */
     eETHERNET_LINK,
+    /* NLP Server IP (Port 8888 ~ )*/
+    eETHERNET_SERVER,
+
     eETHERNET_END
 };
 
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern void ethernet_ip_str     (char *ip_str);
-extern void ethernet_mac_str    (char *mac_str);
+extern char *get_board_ip       (void);
+extern char *get_mac_addr       (void);
+extern int  get_ethernet_iperf  (void);
 
-extern int  ethernet_check      (int id, char action, char *resp);
-extern int  ethernet_grp_init   (void);
+extern int  ethernet_check      (int dev_id, char *resp);
+extern void ethernet_grp_init   (char *cfg);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

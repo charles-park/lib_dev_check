@@ -3,8 +3,8 @@
  * @file audio.h
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-21
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -20,6 +20,8 @@
 //------------------------------------------------------------------------------
 // Define the Device ID for the AUDIO group.
 //------------------------------------------------------------------------------
+#define eAUDIO_CFG  -1
+
 enum {
     eAUDIO_LEFT,
     eAUDIO_RIGHT,
@@ -29,8 +31,9 @@ enum {
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int audio_check     (int id, char action, char *resp);
-extern int audio_grp_init  (void);
+extern int  audio_data_check(int dev_id, int resp_i);
+extern int  audio_check     (int dev_id, char *resp);
+extern void audio_grp_init  (char *cfg);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

@@ -3,8 +3,8 @@
  * @file led.c
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-21
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -39,11 +39,13 @@
 //------------------------------------------------------------------------------
 struct device_led {
     // Control path
-    const char *path;
-    // set str
-    const char *set;
-    // clear str
-    const char *clr;
+    char path [STR_PATH_LENGTH];
+    // str set/clr
+    int on_value, off_value;
+    // ADC con_name
+    char cname[STR_NAME_LENGTH];
+    // adc value
+    int max, min;
 };
 
 //------------------------------------------------------------------------------
@@ -55,14 +57,57 @@ struct device_led {
 //------------------------------------------------------------------------------
 struct device_led DeviceLED [eLED_END] = {
     // eLED_POWER
-    { "/sys/class/leds/red/brightness", "0", "255" },
+    { { 0, }, 0, 0, { 0, }, 0, 0},
     // eLED_ALIVE
-    { "/sys/class/leds/blue/brightness" , "255", "0" },
+    { { 0, }, 0, 0, { 0, }, 0, 0},
+    // eLED_100M
+    { { 0, }, 0, 0, { 0, }, 0, 0},
+    // eLED_1G
+    { { 0, }, 0, 0, { 0, }, 0, 0},
 };
 
-const char *ALIVE_TRIGGER = "/sys/class/leds/blue/trigger";
+//------------------------------------------------------------------------------
+static int ethernet_link_speed (int id)
+{
+    FILE *fp;
+    char cmd_line[STR_PATH_LENGTH];
+
+    if (access (DeviceLED[id].path, F_OK) != 0)
+        return 0;
+
+    memset (cmd_line, 0x00, sizeof(cmd_line));
+    if ((fp = fopen (DeviceLED[id].path, "r")) != NULL) {
+        memset (cmd_line, 0x00, sizeof(cmd_line));
+        if (NULL != fgets (cmd_line, sizeof(cmd_line), fp)) {
+            fclose (fp);
+            return atoi (cmd_line);
+        }
+    }
+    return 0;
+}
 
 //------------------------------------------------------------------------------
+static int ethernet_link_setup (int dev_id, int speed)
+{
+    FILE *fp;
+    char cmd_line[STR_PATH_LENGTH], retry = 10;
+
+    if (ethernet_link_speed (DEVICE_ID(dev_id)) != speed) {
+        memset (cmd_line, 0x00, sizeof(cmd_line));
+        sprintf(cmd_line,"ethtool -s eth0 speed %d duplex full 2>&1 && sync ", speed);
+        if ((fp = popen(cmd_line, "w")) != NULL)
+            pclose(fp);
+
+        // timeout 10 sec
+        while (retry--) {
+            sleep (1);
+            if (ethernet_link_speed(DEVICE_ID(dev_id)) == speed)
+                return 1;
+        }
+        return 0;
+    }
+    return 1;
+}
 //------------------------------------------------------------------------------
 static int led_read (const char *path)
 {
@@ -96,45 +141,124 @@ static int led_write (const char *path, const char *wdata)
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-int led_check (int id, char action, char *resp)
+int led_data_check (int dev_id, int resp_i)
 {
-    int value = 0;
-
-    if ((id >= eLED_END) || (access (DeviceLED[id].path, R_OK) != 0)) {
-        sprintf (resp, "%06d", 0);
-        return 0;
-    }
-
-    switch (action) {
-        case 'S':
-            value = led_write (DeviceLED[id].path, DeviceLED[id].set);
+    int status = 0, id = DEVICE_ID(dev_id);
+    switch (id) {
+        case eLED_ALIVE: case eLED_POWER:
+        case eLED_100M:  case eLED_1G:
+            if (DEVICE_ACTION(dev_id))
+                status = (resp_i > DeviceLED[id].max) ? 1 : 0;    // led on
+            else
+                status = (resp_i < DeviceLED[id].min) ? 1 : 0;    // led off
             break;
-        case 'C':
-            value = led_write (DeviceLED[id].path, DeviceLED[id].clr);
+        default :
+            status = 0;
+            break;
+    }
+    return status;
+}
+
+//------------------------------------------------------------------------------
+int led_check (int dev_id, char *resp)
+{
+    int value = 0, status = 0, id = DEVICE_ID(dev_id);
+
+    switch (id) {
+        case eLED_POWER: case eLED_ALIVE:
+            if (!strncmp (DeviceLED[id].path, "none", strlen("none"))) {
+                status = 1;
+                value  = DEVICE_ACTION(dev_id);
+            } else {
+                char w_value[STR_NAME_LENGTH];
+
+                memset (w_value, 0, sizeof(w_value));
+
+                if (DEVICE_ACTION(dev_id) == 1) sprintf (w_value, "%d", DeviceLED[id].on_value);
+                else                            sprintf (w_value, "%d", DeviceLED[id].off_value);
+
+                value  = led_write (DeviceLED[id].path, w_value);
+                status = (value == led_read (DeviceLED[id].path)) ? 1 : -1;
+            }
+            break;
+
+        case eLED_100M: case eLED_1G:
+            value  = DEVICE_ACTION(dev_id) ? DeviceLED[id].on_value : DeviceLED[id].off_value;
+            status = ethernet_link_setup (dev_id, value) ? 1 : -1;
             break;
         default :
             break;
     }
-    if (value != led_read (DeviceLED[id].path))
-        value = 0;
 
-    sprintf (resp, "%06d", value);
-    return 1;
+    DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', DeviceLED[id].cname);
+
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
+    return status;
 }
 
 //------------------------------------------------------------------------------
-int led_grp_init (void)
+void led_grp_init (char *cfg)
 {
-    int id;
-    // Alive LED Trigger setting
-    if (access (DeviceLED[eLED_ALIVE].path, R_OK) == 0)
-        led_write (ALIVE_TRIGGER, "none");
+    char *tok;
+    int did;
 
-    // Default LED status OFF
-    for (id = 0; id < eLED_END; id++)
-        led_write (DeviceLED[id].path, DeviceLED[id].clr);
+    if ((tok = strtok (cfg, ",")) != NULL) {
+        if ((tok = strtok (NULL, ",")) != NULL) {
+            did = atoi(tok);
+            switch (did) {
+                case eLED_POWER: case eLED_ALIVE:
+                case eLED_100M: case eLED_1G:
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DeviceLED[did].path, tok, strlen(tok));
 
-    return 1;
+                    // led on value
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceLED[did].on_value = atoi(tok);
+
+                    // led off value
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceLED[did].off_value = atoi(tok);
+
+                    // ADC port name
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DeviceLED[did].cname, tok, strlen(tok));
+
+                    // led on ADC value
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceLED[did].max = atoi(tok);
+
+                    // led off ADC value
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceLED[did].min = atoi(tok);
+
+                    break;
+                case eLED_CFG:
+                    if ((tok = strtok (NULL, ",")) != NULL) {
+                        char ctl_path [STR_PATH_LENGTH], ctl_str [STR_NAME_LENGTH];
+
+                        memset (ctl_path, 0, sizeof(ctl_path));
+                        memset (ctl_str,  0, sizeof(ctl_str));
+
+                        switch (atoi(tok)) {
+                            case eLED_POWER: case eLED_ALIVE:
+                                if ((tok = strtok (NULL, ",")) != NULL)
+                                    strncpy (ctl_path, tok, strlen(tok));
+                                if ((tok = strtok (NULL, ",")) != NULL)
+                                    strncpy (ctl_str, tok, strlen(tok));
+
+                                led_write (ctl_path, ctl_str);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    break;
+                default :
+                    printf ("%s : error! unknown did = %d\n", __func__, did);
+                    break;
+            }
+        }
+    }
 }
 
 //------------------------------------------------------------------------------

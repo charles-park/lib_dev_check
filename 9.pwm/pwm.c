@@ -38,12 +38,12 @@
 
 //------------------------------------------------------------------------------
 struct device_pwm {
-    // Control path
-    const char *path;
-    // set
-    const char *set;
-    // clear
-    const char *clr;
+    char path [STR_PATH_LENGTH];
+    int pwm_ch;
+    int period;
+    int duty;
+    char cname [STR_NAME_LENGTH];
+    int max, min;
 };
 
 //------------------------------------------------------------------------------
@@ -51,13 +51,11 @@ struct device_pwm {
 // Configuration
 //
 //------------------------------------------------------------------------------
-/* define pwm devices (ODROID-N2L) */
-//------------------------------------------------------------------------------
-struct device_pwm DevicePWM [eLED_END] = {
+struct device_pwm DevicePWM [ePWM_END] = {
     // PWM0
-    { "/sys/devices/platform/pwm-fan/hwmon/hwmon0/pwm0_enable", "1", "0" },
+    { { 0, }, 0, 0, 0, { 0, }, 0, 0 },
     // PWM1
-    { "/sys/devices/platform/pwm-fan/hwmon/hwmon0/pwm1_enable", "1", "0" },
+    { { 0, }, 0, 0, 0, { 0, }, 0, 0 },
 };
 
 //------------------------------------------------------------------------------
@@ -92,37 +90,123 @@ static int pwm_write (const char *path, const char *wdata)
 }
 
 //------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-int pwm_check (int id, char action, char *resp)
+static int pwm_enable (struct device_pwm *pwm, int enable)
 {
-    int value = 0;
+    char f_path[STR_PATH_LENGTH *2] = { 0, }, w_data[2] = { 0, };
 
-    if ((id >= ePWM_END) || (access (DevicePWM[id].path, R_OK) != 0)) {
-        sprintf (resp, "%06d", 0);
-        return 0;
-    }
+    memset    (f_path, 0, sizeof(f_path)); memset  (w_data, 0, sizeof(w_data));
+    sprintf   (f_path, "%s/pwm%d/enable", pwm->path, pwm->pwm_ch);
+    sprintf   (w_data, "%d", enable);
 
-    switch (action) {
-        case 'S':
-            value = pwm_write (DevicePWM[id].path, DevicePWM[id].set);
+    return pwm_write (f_path, w_data);
+}
+
+//------------------------------------------------------------------------------
+static void pwm_config (struct device_pwm *pwm)
+{
+    char f_path[STR_PATH_LENGTH *2] = { 0, }, w_data[2] = { 0, };
+
+    memset    (f_path, 0, sizeof(f_path)); memset  (w_data, 0, sizeof(w_data));
+    sprintf   (f_path, "%s/export", pwm->path);
+    sprintf   (w_data, "%d",pwm->pwm_ch);
+    pwm_write (f_path, w_data);
+
+    memset    (f_path, 0, sizeof(f_path)); memset  (w_data, 0, sizeof(w_data));
+    sprintf   (f_path, "%s/pwm%d/peroid", pwm->path, pwm->pwm_ch);
+    sprintf   (w_data, "%d", pwm->period);
+    pwm_write (f_path, w_data);
+
+    memset    (f_path, 0, sizeof(f_path)); memset  (w_data, 0, sizeof(w_data));
+    sprintf   (f_path, "%s/pwm%d/duty", pwm->path, pwm->pwm_ch);
+    sprintf   (w_data, "%d", pwm->duty);
+    pwm_write (f_path, w_data);
+
+    pwm_enable(pwm, 0);
+}
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+int pwm_data_check (int dev_id, int resp_i)
+{
+    int status = 0, id = DEVICE_ID(dev_id);
+    switch (id) {
+        case ePWM_0: case ePWM_1:
+            if (DEVICE_ACTION(dev_id))
+                status = (resp_i > DevicePWM[id].max) ? 1 : 0;    // pwm on
+            else
+                status = (resp_i < DevicePWM[id].min) ? 1 : 0;    // pwm off
             break;
-        case 'C':
-            value = pwm_write (DevicePWM[id].path, DevicePWM[id].clr);
+        default :
+            status = 0;
+            break;
+    }
+    return status;
+}
+
+//------------------------------------------------------------------------------
+int pwm_check (int dev_id, char *resp)
+{
+    int value = 0, status = 0, id = DEVICE_ID(dev_id);
+
+    switch (id) {
+        case ePWM_0: case ePWM_1:
+            value  = pwm_enable (&DevicePWM[id], DEVICE_ACTION(dev_id) ? 1 : 0);
+            status = (value == pwm_read (DevicePWM[id].path)) ? 1 : -1;
             break;
         default :
             break;
     }
-    if (value != pwm_read (DevicePWM[id].path))
-        value = 0;
+    DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', DevicePWM[id].cname);
 
-    sprintf (resp, "%06d", value);
-    return 1;
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
+    return status;
 }
 
 //------------------------------------------------------------------------------
-int pwm_grp_init (void)
+void pwm_grp_init (char *cfg)
 {
-    return 1;
+    char *tok;
+    int did;
+
+    if ((tok = strtok (cfg, ",")) != NULL) {
+        if ((tok = strtok (NULL, ",")) != NULL) {
+            did = atoi(tok);
+            switch (did) {
+                case ePWM_0: case ePWM_1:
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DevicePWM[did].path, tok, strlen(tok));
+
+                    // PWM Channel
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DevicePWM[did].pwm_ch = atoi(tok);
+
+                    // PWM Period
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DevicePWM[did].period = atoi(tok);
+                    // PWM Duty
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DevicePWM[did].duty = atoi(tok);
+
+                    // ADC con name
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DevicePWM[did].cname, tok, strlen(tok));
+                    // ADC max
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DevicePWM[did].max = atoi(tok);
+                    // ADC min
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DevicePWM[did].min = atoi(tok);
+
+                    // pwm config (export pwm_ch, peroid, duty)
+                    pwm_config (&DevicePWM[did]);
+                    break;
+
+                default :
+                    printf ("%s : error! unknown did = %d\n", __func__, did);
+                    break;
+            }
+        }
+    }
 }
 
 //------------------------------------------------------------------------------

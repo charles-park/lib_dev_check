@@ -3,8 +3,8 @@
  * @file audio.c
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-21
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -30,6 +30,7 @@
 #include <linux/fb.h>
 #include <getopt.h>
 #include <pthread.h>
+#include <signal.h>
 #include <sys/sysinfo.h>
 
 //------------------------------------------------------------------------------
@@ -38,13 +39,15 @@
 
 //------------------------------------------------------------------------------
 struct device_audio {
-    // find flag
-    char is_file;
-    // Control file name
-    const char *fname;
-    // play time (sec)
-    int play_time;
-    char path[STR_PATH_LENGTH];
+    // audio file name
+    char fname[STR_NAME_LENGTH];
+    char path [STR_PATH_LENGTH];
+
+    // ADC con_name
+    char cname[STR_NAME_LENGTH];
+
+    // ADC Check value (on, off)
+    int max, min;
 };
 
 //------------------------------------------------------------------------------
@@ -54,138 +57,134 @@ struct device_audio {
 //------------------------------------------------------------------------------
 /* define audio devices */
 //------------------------------------------------------------------------------
-#define PLAY_TIME_SEC   2
-
 struct device_audio DeviceAUDIO [eAUDIO_END] = {
     // AUDIO LEFT
-    { 0, "1khz_left.wav" , PLAY_TIME_SEC, { 0, } },
+    { { 0, }, { 0, }, { 0, }, 0, 0 },
     // AUDIO RIGHT
-    { 0, "1khz_right.wav", PLAY_TIME_SEC, { 0, } },
+    { { 0, }, { 0, }, { 0, }, 0, 0 },
 };
 
-//------------------------------------------------------------------------------
-// return 1 : find success, 0 : not found
-//------------------------------------------------------------------------------
-static int find_file_path (const char *fname, char *file_path)
-{
-    FILE *fp;
-    char cmd_line[STR_PATH_LENGTH];
-
-    memset (cmd_line, 0, sizeof(cmd_line));
-    sprintf(cmd_line, "%s\n", "pwd");
-
-    if (NULL != (fp = popen(cmd_line, "r"))) {
-        memset (cmd_line, 0, sizeof(cmd_line));
-        fgets  (cmd_line, STR_PATH_LENGTH, fp);
-        pclose (fp);
-
-        strncpy (file_path, cmd_line, strlen(cmd_line)-1);
-
-        memset (cmd_line, 0, sizeof(cmd_line));
-        sprintf(cmd_line, "find -name %s\n", fname);
-        if (NULL != (fp = popen(cmd_line, "r"))) {
-            memset (cmd_line, 0, sizeof(cmd_line));
-            fgets  (cmd_line, STR_PATH_LENGTH, fp);
-            pclose (fp);
-            if (strlen(cmd_line)) {
-                strncpy (&file_path[strlen(file_path)], &cmd_line[1], strlen(cmd_line)-1);
-                file_path[strlen(file_path)-1] = ' ';
-                return 1;
-            }
-            return 0;
-        }
-    }
-    pclose(fp);
-    return 0;
-}
+// Devuce H/W num. ch, play time
+volatile int AudioHW = 0, AudioCH = 0, AudioTime = 0, AudioEnable = 0;
 
 //------------------------------------------------------------------------------
 // thread control variable
 //------------------------------------------------------------------------------
-pthread_mutex_t audio_mutex;
-pthread_t audio_thread;
-
-volatile int isAudioBusy = 0, AudioPlayTime = 0, AudioEnable = 0;
-volatile char *AudioFileName = NULL;
-
+// speaker-test -D hw:AudioHW,AudioCH -c 2 -t sine -f 1000 -p 2 -s 1 (left)
+// speaker-test -D hw:AudioHW,AudioCH -c 2 -t sine -f 1000 -p 2 -s 2 (right)
 //------------------------------------------------------------------------------
 void *audio_thread_func (void *arg)
 {
+    struct device_audio *paudio = (struct device_audio *)arg;
+
     FILE *fp;
-    char cmd [STR_PATH_LENGTH];
+    char cmd [STR_PATH_LENGTH *2];
 
-    while (1) {
-        if (!isAudioBusy && AudioEnable) {
-            pthread_mutex_lock   (&audio_mutex);
-            isAudioBusy = 1;
-            pthread_mutex_unlock (&audio_mutex);
+    AudioEnable = 1;
 
-            memset (cmd, 0, sizeof(cmd));
-            if ((AudioFileName != NULL) && AudioPlayTime) {
-                sprintf (cmd, "aplay -Dhw:1,0 %s -d %d && sync",
-                    AudioFileName, AudioPlayTime);
-                if ((fp = popen (cmd, "r")) != NULL)
-                    pclose(fp);
-            }
+    memset  (cmd, 0, sizeof(cmd));
+    sprintf (cmd, "aplay -Dhw:%d,%d %s -d %d && sync",
+                AudioHW, AudioCH, paudio->path, AudioTime);
 
-            pthread_mutex_lock   (&audio_mutex);
-            isAudioBusy = 0;    AudioEnable = 0;
-            pthread_mutex_unlock (&audio_mutex);
-        }
-        usleep (1000);
-    }
+    if ((fp = popen (cmd, "w")) != NULL)
+        pclose(fp);
+
+    AudioEnable = 0;    usleep (100 *1000);
+
+    return arg;
 }
 
 //------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-int audio_check (int id, char action, char *resp)
+void audio_thread_stop (void)
 {
-    int value = 0, retry = PLAY_TIME_SEC + 1;;
+    FILE *fp;
+    const char *cmd = "ps ax | grep aplay | awk '{print $1}' | xargs kill";
 
-    if ((id >= eAUDIO_END) || (DeviceAUDIO[id].is_file != 1)) {
-        sprintf (resp, "%06d", 0);
-        return 0;
-    }
+    if ((fp = popen (cmd, "w")) != NULL)
+        pclose(fp);
 
-    switch (action) {
-        case 'C':   /* wait audio stop */
-            while (AudioEnable && retry--)  sleep (1);
-            value = retry ? 1 : 0;
-            break;
-        case 'W':
-            while (AudioEnable && retry--)  sleep (1);
+    AudioEnable = 0;    usleep (100 *1000);
+}
 
-            if (retry) {
-                pthread_mutex_lock   (&audio_mutex);
-                AudioFileName = DeviceAUDIO[id].path;
-                AudioPlayTime = DeviceAUDIO[id].play_time;
-                AudioEnable = 1;
-                value = DeviceAUDIO[id].is_file;
-                pthread_mutex_unlock (&audio_mutex);
-            }
+//------------------------------------------------------------------------------
+int audio_data_check (int dev_id, int resp_i)
+{
+    int status = 0, id = DEVICE_ID(dev_id);
+    switch (id) {
+        case eAUDIO_LEFT: case eAUDIO_RIGHT:
+            if (DEVICE_ACTION(dev_id))
+                status = (resp_i < DeviceAUDIO[id].min) ? 1 : 0;    // audio on (low)
             else
-                printf ("audio busy\n");
+                status = (resp_i > DeviceAUDIO[id].max) ? 1 : 0;    // audio off (high)
+            break;
+        default :
+            status = 0;
+            break;
+    }
+    return status;
+}
 
+//------------------------------------------------------------------------------
+int audio_check (int dev_id, char *resp)
+{
+    int status = 0, id = DEVICE_ID(dev_id);
+    pthread_t audio_thread;
+
+    if (AudioEnable)    audio_thread_stop();
+
+    switch (id) {
+        case eAUDIO_LEFT: case eAUDIO_RIGHT:
+            status = 1;
+            if (DEVICE_ACTION(dev_id)) {
+                if (pthread_create (&audio_thread, NULL, audio_thread_func, &DeviceAUDIO[id])) {
+                    printf ("%s : pthread_create error!\n", __func__);
+                    status = -1;
+                }
+            }
             break;
         default :
             break;
     }
-    sprintf (resp, "%06d", value);
-    return value;
+
+    DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', DeviceAUDIO[id].cname);
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
+    return status;
 }
 
 //------------------------------------------------------------------------------
-int audio_grp_init (void)
+void audio_grp_init (char *cfg)
 {
-    int id;
+    char *tok;
+    int did;
 
-    for (id = 0; id < eAUDIO_END; id++) {
-        memset (DeviceAUDIO[id].path, 0, STR_PATH_LENGTH);
-        DeviceAUDIO[id].is_file =
-            find_file_path (DeviceAUDIO[id].fname, DeviceAUDIO[id].path);
+    if ((tok = strtok (cfg, ",")) != NULL) {
+        if ((tok = strtok (NULL, ",")) != NULL) {
+            did = atoi(tok);
+            switch (did) {
+                case eAUDIO_LEFT: case eAUDIO_RIGHT:
+                    if ((tok = strtok (NULL, ",")) != NULL) {
+                        strncpy (DeviceAUDIO[did].fname, tok, strlen(tok));
+                        find_file_path ((const char *)DeviceAUDIO[did].fname,
+                                        (char *)DeviceAUDIO[did].path);
+                    }
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DeviceAUDIO[did].cname, tok, strlen(tok));
+
+                    if ((tok = strtok (NULL, ",")) != NULL) DeviceAUDIO[did].max = atoi(tok);
+                    if ((tok = strtok (NULL, ",")) != NULL) DeviceAUDIO[did].min = atoi(tok);
+                    break;
+                case eAUDIO_CFG:
+                    if ((tok = strtok (NULL, ",")) != NULL) AudioHW   = atoi(tok);
+                    if ((tok = strtok (NULL, ",")) != NULL) AudioCH   = atoi(tok);
+                    if ((tok = strtok (NULL, ",")) != NULL) AudioTime = atoi(tok);
+
+                    break;
+                default :
+                    printf ("%s : error! unknown did = %d\n", __func__, did);
+                    break;
+            }
+        }
     }
-    pthread_create (&audio_thread, NULL, audio_thread_func, &DeviceAUDIO);
-    return 1;
 }
 
 //------------------------------------------------------------------------------

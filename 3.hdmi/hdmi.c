@@ -3,8 +3,8 @@
  * @file hdmi.c
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-20
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -37,13 +37,13 @@
 #include "hdmi.h"
 
 //------------------------------------------------------------------------------
-struct device_led {
+struct device_hdmi {
     // Control path
-    const char *path;
-
-    const char *pass_str;
-    // 1 = pass, 0 = fail
-    int value;
+    char path[STR_PATH_LENGTH +1];
+    // compare value
+    char pass_str[STR_PATH_LENGTH +1];
+    // edid value str
+    int is_str;
 };
 
 //------------------------------------------------------------------------------
@@ -53,22 +53,12 @@ struct device_led {
 //------------------------------------------------------------------------------
 /* define hdmi devices */
 //------------------------------------------------------------------------------
-#define HDMI_READ_BYTES 32
+#define HDMI_READ_BYTES 16
 
-struct device_led DeviceHDMI [eHDMI_END] = {
+struct device_hdmi DeviceHDMI [eHDMI_END] = {
     // EDID
-    {
-        "/sys/devices/platform/display-subsystem/drm/card0/card0-HDMI-A-1/edid",
-        /* 16 char string (8bytes raw data)*/
-        "00FFFFFFFFFFFF00",
-        0
-    },
-    // HPD
-    {
-        "/sys/devices/platform/display-subsystem/drm/card0/card0-HDMI-A-1/status",
-        "connected",
-        0
-    },
+    {{0,},{0,},0},
+    {{0,},{0,},0},
 };
 
 //------------------------------------------------------------------------------
@@ -89,73 +79,72 @@ static int hdmi_read (const char *path, char *rdata)
 //------------------------------------------------------------------------------
 static int data_check (int id, const char *rdata)
 {
-    char buf[HDMI_READ_BYTES];
-    memset (buf, 0, sizeof(buf));
+    char buf[HDMI_READ_BYTES+1];
 
-    switch (id) {
-        case eHDMI_EDID:
-            sprintf (buf, "%02X%02X%02X%02X%02X%02X%02X%02X",
-                rdata[0], rdata[1], rdata[2], rdata[3],
-                rdata[4], rdata[5], rdata[6], rdata[7]);
-            break;
-        // hpd
-        case eHDMI_HPD:
-            strncpy (buf, rdata, strlen (DeviceHDMI[id].pass_str));
-            break;
-        default:
-            break;
-    }
+    memset  (buf, 0, sizeof(buf));
 
-    if (!strncmp (buf,
-        DeviceHDMI[id].pass_str, strlen (DeviceHDMI[id].pass_str) -1))
+    if (DeviceHDMI[id].is_str)
+        sprintf (buf, "%s", rdata);
+    else
+        sprintf (buf, "%02x%02x%02x%02x%02x%02x%02x%02x",
+            rdata [0], rdata [1], rdata [2], rdata [3],
+            rdata [4], rdata [5], rdata [6], rdata [7]
+        );
+
+    if (!strncmp (buf, DeviceHDMI[id].pass_str, strlen (DeviceHDMI[id].pass_str)))
         return 1;
 
     return 0;
 }
 
 //------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-int hdmi_check (int id, char action, char *resp)
+int hdmi_check (int dev_id, char *resp)
 {
-    int value = 0;
-    char rdata[HDMI_READ_BYTES];
+    int status = 0, id = DEVICE_ID(dev_id);
 
-    if ((id >= eHDMI_END) || (access (DeviceHDMI[id].path, R_OK) != 0)) {
-        sprintf (resp, "%s", "FAIL");
-        return 0;
-    }
-
-    memset (rdata, 0, sizeof(rdata));
-
-    switch (action) {
-        case 'I':
-            value = DeviceHDMI[id].value;
-            break;
-        case 'R':
-            if (hdmi_read (DeviceHDMI[id].path, rdata))
-                value = data_check (id, rdata);
+    switch (id) {
+        case eHDMI_EDID: case eHDMI_HPD:
+            if (hdmi_read (DeviceHDMI[id].path, resp))
+                status = data_check (id, resp);
+            else
+                status = -1;
             break;
         default :
             break;
     }
-    sprintf (resp, "%s", value ? "PASS":"FAIL");
-    return value;
+    if (status == 1)
+        DEVICE_RESP_FORM_STR (resp, 'P', "PASS");
+    else
+        DEVICE_RESP_FORM_STR (resp, 'F', "FAIL");
+
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
+    return status;
 }
 
 //------------------------------------------------------------------------------
-int hdmi_grp_init (void)
+void hdmi_grp_init (char *cfg)
 {
-    int id;
+    char *tok;
+    int did;
 
-    for (id = 0; id < eHDMI_END; id++) {
-        if ((access (DeviceHDMI[id].path, R_OK)) == 0) {
-            char rdata[HDMI_READ_BYTES];
-            memset (rdata, 0, sizeof(rdata));
-            if (hdmi_read (DeviceHDMI[id].path, rdata))
-                DeviceHDMI[id].value = data_check (id, rdata);
+    if ((tok = strtok (cfg, ",")) != NULL) {
+        if ((tok = strtok (NULL, ",")) != NULL) {
+            did = atoi(tok);
+            switch (did) {
+                case eHDMI_EDID: case eHDMI_HPD:
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DeviceHDMI[did].path, tok, strlen(tok));
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        strncpy (DeviceHDMI[did].pass_str, tok, strlen(tok));
+                    if ((tok = strtok (NULL, ",")) != NULL)
+                        DeviceHDMI[did].is_str = atoi(tok);
+                    break;
+                default :
+                    printf ("%s : error! unknown did = %d\n", __func__, did);
+                    break;
+            }
         }
     }
-    return 1;
 }
 
 //------------------------------------------------------------------------------

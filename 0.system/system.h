@@ -3,8 +3,8 @@
  * @file system.h
  * @author charles-park (charles.park@hardkernel.com)
  * @brief Device Test library for ODROID-JIG.
- * @version 0.2
- * @date 2023-10-12
+ * @version 2.0
+ * @date 2024-11-19
  *
  * @package apt install iperf3, nmap, ethtool, usbutils, alsa-utils
  *
@@ -24,14 +24,15 @@ enum {
     eSYSTEM_MEM,
     eSYSTEM_FB_X,
     eSYSTEM_FB_Y,
+    eSYSTEM_FB_SIZE,
     eSYSTEM_END
 };
 
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int system_check     (int id, char action, char *resp);
-extern int system_grp_init  (void);
+extern int  system_check    (int dev_id, char *resp);
+extern void system_grp_init (char *cfg);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
