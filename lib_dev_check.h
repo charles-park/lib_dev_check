@@ -29,6 +29,7 @@
 #include "./10.ir/ir.h"
 #include "./11.gpio/gpio_pin.h"
 #include "./12.firmware/fw.h"
+#include "./13.misc/misc.h"
 #include "./lib_gpio/lib_gpio.h"
 #include "./lib_efuse/lib_efuse.h"
 #include "./lib_efuse/lib_efuse.h"
@@ -101,6 +102,7 @@ enum {
     eGID_IR,
     eGID_GPIO,
     eGID_FW,
+    eGID_MISC,
     eGID_END,
 };
 

@@ -64,6 +64,8 @@ struct device_led DeviceLED [eLED_END] = {
     { { 0, }, 0, 0, { 0, }, 0, 0},
     // eLED_1G
     { { 0, }, 0, 0, { 0, }, 0, 0},
+    // eLED_NVME
+    { { 0, }, 0, 0, { 0, }, 0, 0},
 };
 
 //------------------------------------------------------------------------------
@@ -95,7 +97,7 @@ static int ethernet_link_setup (int dev_id, int speed)
     if (ethernet_link_speed (DEVICE_ID(dev_id)) != speed) {
         memset (cmd_line, 0x00, sizeof(cmd_line));
         sprintf(cmd_line,"ethtool -s eth0 speed %d duplex full 2>&1 && sync ", speed);
-        if ((fp = popen(cmd_line, "w")) != NULL)
+        if ((fp = popen(cmd_line, "r")) != NULL)
             pclose(fp);
 
         // timeout 10 sec
@@ -146,7 +148,7 @@ int led_data_check (int dev_id, int resp_i)
     int status = 0, id = DEVICE_ID(dev_id);
     switch (id) {
         case eLED_ALIVE: case eLED_POWER:
-        case eLED_100M:  case eLED_1G:
+        case eLED_100M:  case eLED_1G:  case eLED_NVME:
             if (DEVICE_ACTION(dev_id))
                 status = (resp_i > DeviceLED[id].max) ? 1 : 0;    // led on
             else
@@ -160,6 +162,29 @@ int led_data_check (int dev_id, int resp_i)
 }
 
 //------------------------------------------------------------------------------
+pthread_t thread_led;
+static volatile int ThreadRunning = 0;
+const char *NVME_READ_CHECK = "dd of=/dev/null bs=16M count=%d iflag=nocache,dsync oflag=nocache,dsync if=%s 2>&1 && sync";
+
+void *thread_func_led (void *arg)
+{
+    struct device_led *p_led = (struct device_led *)arg;
+    char cmd [STR_PATH_LENGTH*2];
+    FILE *fp;
+
+    memset  (cmd, 0, sizeof(cmd));
+
+    sprintf (cmd, NVME_READ_CHECK, p_led->on_value, p_led->path);
+
+    ThreadRunning = 1;
+
+    if ((fp = popen (cmd, "r")) != NULL)    pclose(fp);
+
+    ThreadRunning = 0;
+
+    return arg;
+}
+
 int led_check (int dev_id, char *resp)
 {
     int value = 0, status = 0, id = DEVICE_ID(dev_id);
@@ -186,6 +211,15 @@ int led_check (int dev_id, char *resp)
             value  = DEVICE_ACTION(dev_id) ? DeviceLED[id].on_value : DeviceLED[id].off_value;
             status = ethernet_link_setup (dev_id, value) ? 1 : -1;
             break;
+
+        case eLED_NVME:
+            while (ThreadRunning)   sleep (1);
+            if (access (DeviceLED[id].path, F_OK) == 0) {
+                if (DEVICE_ACTION(dev_id) == 1) pthread_create (&thread_led, NULL, thread_func_led, &DeviceLED[id]);
+                status =  1;
+            }
+            break;
+
         default :
             break;
     }
@@ -207,7 +241,7 @@ void led_grp_init (char *cfg)
             did = atoi(tok);
             switch (did) {
                 case eLED_POWER: case eLED_ALIVE:
-                case eLED_100M: case eLED_1G:
+                case eLED_100M: case eLED_1G: case eLED_NVME:
                     if ((tok = strtok (NULL, ",")) != NULL)
                         strncpy (DeviceLED[did].path, tok, strlen(tok));
 

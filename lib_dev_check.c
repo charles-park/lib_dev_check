@@ -128,6 +128,9 @@ int device_resp_check (parse_resp_data_t *pdata)
     memset (resp, 0, sizeof(resp));
 
     switch (pdata->gid) {
+        case eGID_MISC:
+            pdata->status_i = misc_check (pdata->did, resp);
+            return pdata->status_i;
         /* IR Thread running */
         case eGID_IR:
             pdata->status_i = ir_check (pdata->did, resp);
@@ -184,6 +187,7 @@ int device_check (int gid, int did, char *dev_resp)
         case eGID_IR:       status = ir_check       (did, dev_resp);  break;
         case eGID_GPIO:     status = gpio_check     (did, dev_resp);  break;
         case eGID_FW:       status = fw_check       (did, dev_resp);  break;
+        case eGID_MISC:     status = misc_check     (did, dev_resp);  break;
         default :
             sprintf (dev_resp, "0,%20s", "unkonwn");
             break;
@@ -228,6 +232,7 @@ int device_setup (const char *cfg_fname)
         if ((ptr = strstr (buf, "IR"))        != NULL)  ir_grp_init (buf);
         if ((ptr = strstr (buf, "GPIO"))      != NULL)  gpio_grp_init (buf);
         if ((ptr = strstr (buf, "FW"))        != NULL)  fw_grp_init (buf);
+        if ((ptr = strstr (buf, "MISC"))      != NULL)  misc_grp_init (buf);
     }
     fclose (pfd);
     return 1;

@@ -134,6 +134,7 @@ static int ethernet_board_ip (void)
     struct ifreq ifr;
     char ip_addr[sizeof(struct sockaddr)+1];
 
+    if (DeviceETHERNET.board_ip_int[0] != 0)    return 1;
 retry:
     usleep (100 * 1000);    // 500ms delay
     /* this entire function is almost copied from ethtool source code */
@@ -170,7 +171,6 @@ char *get_board_ip (void)
 {
     if (ethernet_board_ip())
         return DeviceETHERNET.board_ip_str;
-
     return NULL;
 }
 
@@ -404,7 +404,7 @@ static int ethernet_mac_check (char *resp)
 
 //------------------------------------------------------------------------------
 pthread_t thread_iperf3;
-volatile int ThreadRunning = 0;
+static volatile int ThreadRunning = 0;
 
 static void *thread_iperf3_func (void *arg)
 {

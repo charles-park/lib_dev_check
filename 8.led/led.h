@@ -27,6 +27,7 @@ enum {
     eLED_ALIVE,
     eLED_100M,  // ethrenet green
     eLED_1G,    // ethrenet orange
+    eLED_NVME,  // NVME Active LED
     eLED_END
 };
 

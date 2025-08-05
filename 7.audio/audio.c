@@ -62,6 +62,10 @@ struct device_audio DeviceAUDIO [eAUDIO_END] = {
     { { 0, }, { 0, }, { 0, }, 0, 0 },
     // AUDIO RIGHT
     { { 0, }, { 0, }, { 0, }, 0, 0 },
+    // AUDIO SLEFT
+    { { 0, }, { 0, }, { 0, }, 0, 0 },
+    // AUDIO SRIGHT
+    { { 0, }, { 0, }, { 0, }, 0, 0 },
 };
 
 // Devuce H/W num. ch, play time
@@ -111,7 +115,7 @@ int audio_data_check (int dev_id, int resp_i)
 {
     int status = 0, id = DEVICE_ID(dev_id);
     switch (id) {
-        case eAUDIO_LEFT: case eAUDIO_RIGHT:
+        case eAUDIO_LEFT: case eAUDIO_RIGHT: case eAUDIO_SLEFT: case eAUDIO_SRIGHT:
             if (DEVICE_ACTION(dev_id))
                 status = (resp_i < DeviceAUDIO[id].min) ? 1 : 0;    // audio on (low)
             else
@@ -133,7 +137,7 @@ int audio_check (int dev_id, char *resp)
     if (AudioEnable)    audio_thread_stop();
 
     switch (id) {
-        case eAUDIO_LEFT: case eAUDIO_RIGHT:
+        case eAUDIO_LEFT: case eAUDIO_RIGHT: case eAUDIO_SLEFT: case eAUDIO_SRIGHT:
             status = 1;
             if (DEVICE_ACTION(dev_id)) {
                 if (pthread_create (&audio_thread, NULL, audio_thread_func, &DeviceAUDIO[id])) {
@@ -161,7 +165,7 @@ void audio_grp_init (char *cfg)
         if ((tok = strtok (NULL, ",")) != NULL) {
             did = atoi(tok);
             switch (did) {
-                case eAUDIO_LEFT: case eAUDIO_RIGHT:
+                case eAUDIO_LEFT: case eAUDIO_RIGHT: case eAUDIO_SLEFT: case eAUDIO_SRIGHT:
                     if ((tok = strtok (NULL, ",")) != NULL) {
                         strncpy (DeviceAUDIO[did].fname, tok, strlen(tok));
                         find_file_path ((const char *)DeviceAUDIO[did].fname,

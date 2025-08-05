@@ -25,6 +25,9 @@
 enum {
     eAUDIO_LEFT,
     eAUDIO_RIGHT,
+    /* Speaker */
+    eAUDIO_SLEFT,
+    eAUDIO_SRIGHT,
     eAUDIO_END
 };
 
