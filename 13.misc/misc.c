@@ -44,6 +44,15 @@ static char spi_pass_str[STR_NAME_LENGTH] = { 0, };
 static char hpdet_str [STR_NAME_LENGTH] = { 0, };
 
 //------------------------------------------------------------------------------
+static void tolowerstr (char *p)
+{
+    int i, c = strlen(p);
+
+    for (i = 0; i < c; i++, p++)
+        *p = tolower(*p);
+}
+
+//------------------------------------------------------------------------------
 static int find_event (const char *f_str)
 {
     FILE *fp;
@@ -90,6 +99,7 @@ void *thread_func_id0 (void *arg)
 
         memset (rdata, 0, sizeof(rdata));
         if (NULL != fgets (rdata, sizeof(rdata), fd)) {
+            tolowerstr (rdata);
             if (NULL != strstr (rdata, spi_pass_str))   BTRelease = 1;
             else                                        BTPress = 1;
         }
@@ -230,8 +240,10 @@ void misc_grp_init (char *cfg)
                     if ((tok = strtok (NULL, ",")) != NULL)
                         strncpy (spi_bt_path, tok, strlen(tok));
 
-                    if ((tok = strtok (NULL, ",")) != NULL)
-                        strncpy (spi_pass_str, tok, strlen(tok));
+                    if ((tok = strtok (NULL, ",")) != NULL) {
+                        strncpy    (spi_pass_str, tok, strlen(tok));
+                        tolowerstr (spi_pass_str);
+                    }
 
                     pthread_create (&thread_id0, NULL, thread_func_id0, NULL);
                     break;
