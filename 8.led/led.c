@@ -218,6 +218,8 @@ int led_check (int dev_id, char *resp)
                 if (DEVICE_ACTION(dev_id) == 1) pthread_create (&thread_led, NULL, thread_func_led, &DeviceLED[id]);
                 status =  1;
             }
+            else
+                status =  -1;
             break;
 
         default :
