@@ -137,9 +137,12 @@ int device_resp_check (parse_resp_data_t *pdata)
             return pdata->status_i;
 
          case eGID_ETHERNET:
-            if (pdata->did == eETHERNET_IPERF)  {
-                pdata->status_i = ethernet_check (pdata->did, resp);
-                return pdata->status_i;
+            switch (pdata->did) {
+                case eETHERNET_IPERF:
+                case eETHERNET_IPERF_S:
+                case eETHERNET_IPERF_C:
+                    pdata->status_i = ethernet_check (pdata->did, resp);
+                    return pdata->status_i;
             }
             break;
         case eGID_LED:

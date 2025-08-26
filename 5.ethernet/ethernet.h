@@ -28,12 +28,26 @@ enum {
     eETHERNET_IP = 0,
     /* R = eth mac read, I = init value, W = eth mac write */
     eETHERNET_MAC,
-    /* R = run iperf server (iperf -s -1), iperf read */
+    /* R = run iperf client speed with nlp_server, iperf read */
     eETHERNET_IPERF,
     /* S = eth 1G setting, C = eth 100M setting, I = init valuue, R = read link speed */
     eETHERNET_LINK,
     /* NLP Server IP (Port 8888 ~ )*/
     eETHERNET_SERVER,
+
+    /*
+        eBOARD_P_C4 = 8888,
+        eBOARD_P_M1 = 9000,
+        eBOARD_P_M1S = 9001,
+        eBOARD_P_M2 = 9002,
+        eBOARD_P_C5 = 9003,
+    */
+    eETHERNET_SERVER_PORT,
+
+    /* R = run iperf server (host:iperf3 -c {client_ip}, client:iperf -s -1), iperf read */
+    eETHERNET_IPERF_S,
+    /* R = run iperf reverse speed (host:iperf3 -c {client_ip} -R, client:iperf -s -1), iperf read */
+    eETHERNET_IPERF_C,
 
     eETHERNET_END
 };

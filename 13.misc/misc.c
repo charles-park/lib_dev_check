@@ -89,6 +89,7 @@ volatile int BTPress = 0, BTRelease = 0;
 void *thread_func_id0 (void *arg)
 {
     FILE *fd;
+    int prev_state = -1, state = 0;
     char rdata[STR_PATH_LENGTH];
 
     while (1) {
@@ -100,8 +101,17 @@ void *thread_func_id0 (void *arg)
         memset (rdata, 0, sizeof(rdata));
         if (NULL != fgets (rdata, sizeof(rdata), fd)) {
             tolowerstr (rdata);
-            if (NULL != strstr (rdata, spi_pass_str))   BTRelease = 1;
-            else                                        BTPress = 1;
+            if (NULL != strstr (rdata, spi_pass_str))   state = 0;
+            else                                        state = 1;
+
+            if (prev_state == -1)
+                prev_state = state;
+
+            if (prev_state != state) {
+                prev_state  = state;
+                if (state)  BTPress   = 1;
+                else        BTRelease = 1;
+            }
         }
         fclose (fd);
         usleep (500 * 1000);
@@ -124,7 +134,7 @@ void *thread_func_id1 (void *arg)
     struct input_event event;
     struct timeval  timeout;
     fd_set readFds;
-    int fd = -1;
+    int fd = -1, prev_state;
     char path[STR_PATH_LENGTH] = { 0, };
 
     // IR Device Name (meson-ir)
@@ -147,8 +157,8 @@ void *thread_func_id1 (void *arg)
             return arg;
         }
 
-        if (test_bit(SW_HEADPHONE_INSERT, sw_bits)) HPDetIn  = 1;
-        else                                        HPDetOut = 1;
+        if (test_bit(SW_HEADPHONE_INSERT, sw_bits)) prev_state = 1;
+        else                                        prev_state = 0;;
 
         /*
         printf("현재 SW 상태:\n");
@@ -181,8 +191,11 @@ void *thread_func_id1 (void *arg)
                     case EV_SW:
                         switch (event.code) {
                             case SW_HEADPHONE_INSERT:
-                                if (event.value)    HPDetIn = 1;
-                                else                HPDetOut = 1;
+                                if (prev_state != event.value) {
+                                    prev_state  = event.value;
+                                    if (event.value)    HPDetIn = 1;
+                                    else                HPDetOut = 1;
+                                }
 
                                 printf ("%s : value = %d\n", __func__, event.value);
                                 break;

@@ -78,7 +78,8 @@ struct device_ethernet {
     char board_mac[MAC_STR_SIZE +1];
 
     int link_speed;
-    int iperf_speed;
+    int iperf_speed_s;
+    int iperf_speed_c;
     int iperf_check_speed;
 };
 
@@ -88,7 +89,7 @@ struct device_ethernet {
 //
 //------------------------------------------------------------------------------
 struct device_ethernet DeviceETHERNET = {
-    {0, }, {0, }, {0, }, {0, }, 0, {0, }, 0, {0, }, {0, }, 0, 0, 0
+    {0, }, {0, }, {0, }, {0, }, 0, {0, }, 0, {0, }, {0, }, 0, 0, 0, 0
 };
 
 //------------------------------------------------------------------------------
@@ -184,7 +185,7 @@ char *get_mac_addr (void)
 
 int get_ethernet_iperf (void)
 {
-    return DeviceETHERNET.iperf_speed;
+    return (DeviceETHERNET.iperf_speed_s && DeviceETHERNET.iperf_speed_c) ? 1 : 0;
 }
 
 //------------------------------------------------------------------------------
@@ -411,7 +412,7 @@ static void *thread_iperf3_func (void *arg)
     FILE *fp;
     char cmd_line [STR_PATH_LENGTH], *pstr = NULL;
 
-    printf ("%s : thread running!\n", __func__);
+    printf ("\n%s : thread running!\n", __func__);
     ThreadRunning = 1;
     memset (cmd_line, 0, sizeof(cmd_line));
     if ((fp = popen("iperf3 -s -1", "r")) != NULL) {
@@ -419,17 +420,28 @@ static void *thread_iperf3_func (void *arg)
             if (strstr (cmd_line, "receiver") != NULL) {
                 if ((pstr = strstr (cmd_line, "MBytes")) != NULL) {
                     while (*pstr != ' ')    pstr++;
-                    DeviceETHERNET.iperf_speed = atoi (pstr);
+                    DeviceETHERNET.iperf_speed_s = atoi (pstr);
+                    printf ("\n%s : popen stop (receiver), iperf speed = %d\n",
+                        __func__, DeviceETHERNET.iperf_speed_s);
+                    break;
+                }
+            }
+
+            if (strstr (cmd_line, "sender") != NULL) {
+                if ((pstr = strstr (cmd_line, "MBytes")) != NULL) {
+                    while (*pstr != ' ')    pstr++;
+                    DeviceETHERNET.iperf_speed_c = atoi (pstr);
+                    printf ("\n%s : popen stop (sender), iperf speed = %d\n",
+                        __func__, DeviceETHERNET.iperf_speed_c);
                     break;
                 }
             }
             memset (cmd_line, 0, sizeof(cmd_line));
         }
         pclose(fp);
-        printf ("%s : popen stop = %d\n", __func__, DeviceETHERNET.iperf_speed);
     }
     ThreadRunning = 0;
-    printf ("%s : thread stop! iperf_speed = %d\n", __func__, DeviceETHERNET.iperf_speed);
+    printf ("\n%s : thread stop! \n", __func__);
     return arg;
 }
 
@@ -446,25 +458,37 @@ void thread_iperf_stop (void)
 }
 
 //------------------------------------------------------------------------------
-static int ethernet_iperf_check (char *resp)
+static int ethernet_iperf_check (char *resp, int id)
 {
-    static int status = 0;
-
-    if (status == -1) {
-        status = 0; DeviceETHERNET.iperf_speed = 0;
-    }
+    int status = 0, iperf_speed = 0;
 
     if (DeviceETHERNET.board_ip_int[0] != 0) {
         thread_iperf_stop ();
 
-        if (!ThreadRunning && !DeviceETHERNET.iperf_speed)
-            pthread_create (&thread_iperf3, NULL, thread_iperf3_func, (void *)&DeviceETHERNET);
+        switch (id) {
+            case eETHERNET_IPERF: case eETHERNET_IPERF_S:
+                if (!ThreadRunning && !DeviceETHERNET.iperf_speed_s)
+                    pthread_create (&thread_iperf3, NULL, thread_iperf3_func, NULL);
 
-        if (DeviceETHERNET.iperf_speed)
-            status = (DeviceETHERNET.iperf_speed > DeviceETHERNET.iperf_check_speed) ? 1 : -1;
+                iperf_speed = DeviceETHERNET.iperf_speed_s;
+
+                if (id == eETHERNET_IPERF)
+                    DeviceETHERNET.iperf_speed_c = iperf_speed;
+
+                break;
+            case eETHERNET_IPERF_C:
+                if (!ThreadRunning && !DeviceETHERNET.iperf_speed_c)
+                    pthread_create (&thread_iperf3, NULL, thread_iperf3_func, NULL);
+
+                iperf_speed = DeviceETHERNET.iperf_speed_c;
+                break;
+        }
+
+        if (iperf_speed)
+            status = (iperf_speed > DeviceETHERNET.iperf_check_speed) ? 1 : -1;
     }
 
-    if (status) DEVICE_RESP_FORM_INT(resp, (status == 1) ? 'P' : 'F', DeviceETHERNET.iperf_speed);
+    if (status) DEVICE_RESP_FORM_INT(resp, (status == 1) ? 'P' : 'F', iperf_speed);
     else        DEVICE_RESP_FORM_STR(resp, 'C', DeviceETHERNET.board_ip_str);
 
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
@@ -497,7 +521,10 @@ int ethernet_check (int dev_id, char *resp)
     switch (id) {
         case eETHERNET_IP:      return ethernet_ip_check    (resp);
         case eETHERNET_MAC:     return ethernet_mac_check   (resp);
-        case eETHERNET_IPERF:   return ethernet_iperf_check (resp);
+
+        case eETHERNET_IPERF_S: case eETHERNET_IPERF_C:
+        case eETHERNET_IPERF:   return ethernet_iperf_check (resp, id);
+
         case eETHERNET_LINK:    return ethernet_link_check  (resp);
         case eETHERNET_SERVER:  return ethernet_server_check(resp);
         default:
