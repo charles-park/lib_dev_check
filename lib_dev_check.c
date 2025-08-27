@@ -205,7 +205,7 @@ int device_check (int gid, int did, char *dev_resp)
 int device_setup (const char *cfg_fname)
 {
     FILE *pfd;
-    char buf[STR_PATH_LENGTH] = {0,}, *ptr;
+    char buf[STR_PATH_LENGTH] = {0,}, *ptr, check_cfg = 0;
 
     memset (buf, 0, sizeof(buf));
     if (!find_file_path (cfg_fname, buf)) {
@@ -221,7 +221,13 @@ int device_setup (const char *cfg_fname)
     while (fgets(buf, sizeof(buf), pfd) != NULL) {
 
         if (buf[0] == '#' || buf[0] == '\n')  continue;
-//        printf ("%s : buf = %s\n", __func__, buf);
+
+        if (!check_cfg) {
+            if (strstr(buf, "ODROID-DEVICE-CONFIG") != NULL)    check_cfg = 1;
+            continue;
+        }
+        //        printf ("%s : buf = %s\n", __func__, buf);
+
         if ((ptr = strstr (buf, "SYSTEM"))    != NULL)  system_grp_init (buf);
         if ((ptr = strstr (buf, "STORAGE"))   != NULL)  storage_grp_init (buf);
         if ((ptr = strstr (buf, "USB"))       != NULL)  usb_grp_init (buf);
