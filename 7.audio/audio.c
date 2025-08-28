@@ -131,26 +131,34 @@ int audio_data_check (int dev_id, int resp_i)
 //------------------------------------------------------------------------------
 int audio_check (int dev_id, char *resp)
 {
-    int status = 0, id = DEVICE_ID(dev_id);
+    int status = 1, id = DEVICE_ID(dev_id);
     pthread_t audio_thread;
+    char resp_data[DEVICE_RESP_SIZE -2];
 
+    memset (resp_data, 0, sizeof(resp_data));
     if (AudioEnable)    audio_thread_stop();
 
     switch (id) {
-        case eAUDIO_LEFT: case eAUDIO_RIGHT: case eAUDIO_SLEFT: case eAUDIO_SRIGHT:
-            status = 1;
-            if (DEVICE_ACTION(dev_id)) {
-                if (pthread_create (&audio_thread, NULL, audio_thread_func, &DeviceAUDIO[id])) {
-                    printf ("%s : pthread_create error!\n", __func__);
-                    status = -1;
-                }
-            }
-            break;
+        case eAUDIO_LEFT:
+            sprintf (resp_data, "%s,%s", DeviceAUDIO[id].cname, DeviceAUDIO[eAUDIO_RIGHT].cname);   break;
+        case eAUDIO_RIGHT:
+            sprintf (resp_data, "%s,%s", DeviceAUDIO[id].cname, DeviceAUDIO[eAUDIO_LEFT].cname);    break;
+        case eAUDIO_SLEFT:
+            sprintf (resp_data, "%s,%s", DeviceAUDIO[id].cname, DeviceAUDIO[eAUDIO_SRIGHT].cname);  break;
+        case eAUDIO_SRIGHT:
+            sprintf (resp_data, "%s,%s", DeviceAUDIO[id].cname, DeviceAUDIO[eAUDIO_SLEFT].cname);   break;
         default :
+            status = 0;
             break;
     }
+    if (DEVICE_ACTION(dev_id) && status) {
+        if (pthread_create (&audio_thread, NULL, audio_thread_func, &DeviceAUDIO[id])) {
+            printf ("%s : pthread_create error!\n", __func__);
+            status = -1;
+        }
+    }
 
-    DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', DeviceAUDIO[id].cname);
+    DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', resp_data);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;
 }
