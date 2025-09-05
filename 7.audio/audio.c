@@ -140,6 +140,12 @@ int audio_check (int dev_id, char *resp)
 
     switch (id) {
         case eAUDIO_LEFT:
+        case eAUDIO_RIGHT:
+        case eAUDIO_SLEFT:
+        case eAUDIO_SRIGHT:
+            sprintf (resp_data, "%s", DeviceAUDIO[id].cname);   break;
+        /*
+        case eAUDIO_LEFT:
             sprintf (resp_data, "%s,%s", DeviceAUDIO[id].cname, DeviceAUDIO[eAUDIO_RIGHT].cname);   break;
         case eAUDIO_RIGHT:
             sprintf (resp_data, "%s,%s", DeviceAUDIO[id].cname, DeviceAUDIO[eAUDIO_LEFT].cname);    break;
@@ -147,6 +153,7 @@ int audio_check (int dev_id, char *resp)
             sprintf (resp_data, "%s,%s", DeviceAUDIO[id].cname, DeviceAUDIO[eAUDIO_SRIGHT].cname);  break;
         case eAUDIO_SRIGHT:
             sprintf (resp_data, "%s,%s", DeviceAUDIO[id].cname, DeviceAUDIO[eAUDIO_SLEFT].cname);   break;
+        */
         default :
             status = 0;
             break;
