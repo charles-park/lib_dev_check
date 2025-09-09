@@ -128,6 +128,9 @@ int device_resp_check (parse_resp_data_t *pdata)
     memset (resp, 0, sizeof(resp));
 
     switch (pdata->gid) {
+        case eGID_SYSTEM:
+            pdata->status_i = system_data_check (pdata->did, pdata->resp_i);
+            return pdata->status_i;
         case eGID_MISC:
             pdata->status_i = misc_check (pdata->did, resp);
             return pdata->status_i;

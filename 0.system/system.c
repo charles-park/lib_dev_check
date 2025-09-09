@@ -112,6 +112,22 @@ static int get_fb_size (const char *path, int id)
 }
 
 //------------------------------------------------------------------------------
+int system_data_check (int dev_id, int resp_i)
+{
+    int status = 0, id = DEVICE_ID(dev_id);
+
+    switch (id) {
+        case eSYSTEM_MEM:
+        DeviceSYSTEM.mem_size = resp_i;
+        status = (resp_i == get_memory_size()) ? 1 : 0;
+
+        default :
+            break;
+    }
+    return status;
+}
+
+//------------------------------------------------------------------------------
 int system_check (int dev_id, char *resp)
 {
     int value = 0, status = 0, id = DEVICE_ID(dev_id);
@@ -142,7 +158,11 @@ int system_check (int dev_id, char *resp)
         default :
             break;
     }
-    DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
+    if ((id == eSYSTEM_MEM) && !DeviceSYSTEM.mem_size)
+        DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'C' : 'F', value);
+    else
+        DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
+
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;
 }

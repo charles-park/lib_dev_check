@@ -31,8 +31,9 @@ enum {
 //------------------------------------------------------------------------------
 // function prototype
 //------------------------------------------------------------------------------
-extern int  system_check    (int dev_id, char *resp);
-extern void system_grp_init (char *cfg);
+extern int  system_data_check   (int dev_id, int resp_i);
+extern int  system_check        (int dev_id, char *resp);
+extern void system_grp_init     (char *cfg);
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
