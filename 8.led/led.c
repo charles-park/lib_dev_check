@@ -226,7 +226,18 @@ int led_check (int dev_id, char *resp)
             break;
     }
 
-    DEVICE_RESP_FORM_STR (resp, (status == 1) ? 'C' : 'F', DeviceLED[id].cname);
+    if (status == 1) {
+        char resp_str[DEVICE_RESP_SIZE-2];
+
+        memset  (resp_str, 0, sizeof(resp_str));
+        sprintf (resp_str, "%s-%d", DeviceLED[id].cname,
+            DEVICE_ACTION(dev_id) ? DeviceLED[id].max : DeviceLED[id].min);
+
+        DEVICE_RESP_FORM_STR (resp, 'C', resp_str);
+
+    } else {
+        DEVICE_RESP_FORM_STR (resp, 'F', DeviceLED[id].cname);
+    }
 
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
     return status;

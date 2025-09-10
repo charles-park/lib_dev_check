@@ -114,7 +114,7 @@ void *thread_func_id0 (void *arg)
             }
         }
         fclose (fd);
-        usleep (500 * 1000);
+        usleep (100 * 1000);
 
         if (BTRelease && BTPress)   break;
     }

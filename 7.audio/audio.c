@@ -143,7 +143,9 @@ int audio_check (int dev_id, char *resp)
         case eAUDIO_RIGHT:
         case eAUDIO_SLEFT:
         case eAUDIO_SRIGHT:
-            sprintf (resp_data, "%s", DeviceAUDIO[id].cname);   break;
+            sprintf (resp_data, "%s-%d", DeviceAUDIO[id].cname,
+                DEVICE_ACTION(dev_id) ? DeviceAUDIO[id].max : DeviceAUDIO[id].min);
+            break;
         /*
         case eAUDIO_LEFT:
             sprintf (resp_data, "%s,%s", DeviceAUDIO[id].cname, DeviceAUDIO[eAUDIO_RIGHT].cname);   break;

@@ -467,8 +467,10 @@ static int ethernet_iperf_check (char *resp, int id)
 
         switch (id) {
             case eETHERNET_IPERF: case eETHERNET_IPERF_S:
-                if (!ThreadRunning && !DeviceETHERNET.iperf_speed_s)
+                if (!ThreadRunning && (DeviceETHERNET.iperf_speed_s < DeviceETHERNET.iperf_check_speed)) {
+                    DeviceETHERNET.iperf_speed_s = 0;
                     pthread_create (&thread_iperf3, NULL, thread_iperf3_func, NULL);
+                }
 
                 iperf_speed = DeviceETHERNET.iperf_speed_s;
 
@@ -477,8 +479,10 @@ static int ethernet_iperf_check (char *resp, int id)
 
                 break;
             case eETHERNET_IPERF_C:
-                if (!ThreadRunning && !DeviceETHERNET.iperf_speed_c)
+                if (!ThreadRunning && (DeviceETHERNET.iperf_speed_c < DeviceETHERNET.iperf_check_speed)) {
+                    DeviceETHERNET.iperf_speed_c = 0;
                     pthread_create (&thread_iperf3, NULL, thread_iperf3_func, NULL);
+                }
 
                 iperf_speed = DeviceETHERNET.iperf_speed_c;
                 break;
