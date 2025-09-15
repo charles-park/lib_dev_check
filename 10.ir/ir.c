@@ -113,7 +113,7 @@ void *thread_func_ir (void *arg)
         // Set 1ms timeout counter
         timeout.tv_sec  = 0;
         // timeout.tv_usec = timeout_ms*1000;
-        timeout.tv_usec = 100000;
+        timeout.tv_usec = 300000;
 
         FD_ZERO(&readFds);
         FD_SET(fd, &readFds);
