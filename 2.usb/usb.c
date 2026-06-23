@@ -92,33 +92,18 @@ const char *USB_W_CHECK = "dd if=/dev/zero bs=16M count=1 iflag=nocache,dsync of
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-static int usb_speed (const char *path)
-{
-    FILE *fp;
-    char cmd[STR_PATH_LENGTH], rdata[STR_PATH_LENGTH];
-
-    if (access (path, R_OK) == 0) {
-        memset  (cmd, 0x00, sizeof(cmd));
-        sprintf (cmd, "%s/speed", path);
-        if ((fp = fopen (cmd, "r")) != NULL) {
-            memset (rdata, 0, sizeof(rdata));
-            fgets  (rdata, sizeof(rdata), fp);
-            fclose (fp);
-        }
-        return atoi (rdata);
-    }
-    return 0;
-}
-
-//------------------------------------------------------------------------------
-static int usb_rw (struct device_usb *p_usb)
+static int find_node (const char *path, char *node)
 {
     FILE *fp;
     char cmd[STR_PATH_LENGTH*2], rdata[STR_PATH_LENGTH], *ptr;
 
-    if (!access (p_usb->path, F_OK)) {
+    if (!access (path, F_OK)) {
         memset  (cmd, 0x00, sizeof(cmd));
-        sprintf (cmd, "find %s/ -name sd* 2>&1", p_usb->path);
+
+        if (!strncmp("/dev/disk", path, strlen("/dev/disk")))
+            sprintf (cmd, "readlink %s 2>&1", path);
+        else
+            sprintf (cmd, "find %s/ -name sd* 2>&1", path);
 
         if ((fp = popen (cmd, "r")) != NULL) {
             memset (rdata, 0x00, sizeof(rdata));
@@ -128,26 +113,72 @@ static int usb_rw (struct device_usb *p_usb)
 
             // find string "sd"
             if ((ptr = strstr (rdata, "sd")) != NULL) {
-                memset  (cmd, 0, sizeof (cmd));
                 // 0x00 -> 0x20 (space)
                 ptr[strlen(ptr)-1] = ' ';
-                sprintf (cmd, "%s%s 2>&1",
-                    p_usb->rw ? USB_W_CHECK : USB_R_CHECK, ptr);
+                strncpy (node, ptr, strlen(ptr));
+            }
+        }
+        return 0;
+    }
+    return -1;
+}
 
-                if ((fp = popen(cmd, "r")) != NULL) {
-                    while (1) {
-                        memset (rdata, 0, sizeof (rdata));
-                        if ((fgets (rdata, sizeof (rdata), fp)) == NULL)
-                            break;
-                        if ((ptr = strstr (rdata, " MB/s")) != NULL) {
-                            while (*ptr != ',') ptr--;
-                            pclose (fp);
-                            return atoi (ptr+1);
-                        }
-                    }
+//------------------------------------------------------------------------------
+static int usb_speed (const char *path)
+{
+    FILE *fp;
+    char cmd[STR_PATH_LENGTH], node[STR_NAME_LENGTH];
+
+    if (access (path, R_OK) == 0) {
+        memset  (cmd, 0x00, sizeof(cmd));
+
+        if (find_node (path, node))     return 0;;
+
+        node[strlen(node)-1] = 0;
+
+        if (!strncmp("/dev/disk", path, strlen("/dev/disk")))
+            sprintf (cmd, "/sys/block/%s/device/../../../../speed", node);
+        else
+            sprintf (cmd, "%s/speed", path);
+
+        if ((fp = fopen (cmd, "r")) != NULL) {
+            memset (cmd, 0, sizeof(cmd));
+            fgets  (cmd, sizeof(cmd), fp);
+            fclose (fp);
+        }
+        return atoi (cmd);
+    }
+    return 0;
+}
+
+//------------------------------------------------------------------------------
+static int usb_rw (struct device_usb *p_usb)
+{
+    FILE *fp;
+    char cmd[STR_PATH_LENGTH*2], node[STR_NAME_LENGTH];
+
+    if (!access (p_usb->path, F_OK)) {
+        memset  (cmd,  0x00, sizeof(cmd));
+        memset  (node, 0x00, sizeof(node));
+
+        if (find_node (p_usb->path, node))     return -1;;
+
+        sprintf (cmd, "%s%s 2>&1",
+            p_usb->rw ? USB_W_CHECK : USB_R_CHECK, node);
+
+        if ((fp = popen(cmd, "r")) != NULL) {
+            while (1) {
+                char *ptr = NULL;
+                memset (cmd, 0, sizeof (cmd));
+                if ((fgets (cmd, sizeof (cmd), fp)) == NULL)
+                    break;
+                if ((ptr = strstr (cmd, " MB/s")) != NULL) {
+                    while (*ptr != ',') ptr--;
                     pclose (fp);
+                    return atoi (ptr+1);
                 }
             }
+            pclose (fp);
         }
         return 0;
     }
