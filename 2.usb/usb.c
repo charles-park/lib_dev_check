@@ -85,94 +85,91 @@ struct device_usb DeviceUSB [eUSB_END] = {
 };
 
 //------------------------------------------------------------------------------
-// USB Read / Write (16 Mbytes, 1 block count)
-//------------------------------------------------------------------------------
-const char *USB_R_CHECK = "dd of=/dev/null bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync if=/dev/";
-const char *USB_W_CHECK = "dd if=/dev/zero bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync of=/dev/";
-
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-static int find_node (const char *path, char *node)
-{
-    FILE *fp;
-    char cmd[STR_PATH_LENGTH*2], rdata[STR_PATH_LENGTH], *ptr;
-
-    if (!access (path, F_OK)) {
-        memset  (cmd, 0x00, sizeof(cmd));
-
-        if (!strncmp("/dev/disk", path, strlen("/dev/disk")))
-            sprintf (cmd, "readlink %s 2>&1", path);
-        else
-            sprintf (cmd, "find %s/ -name sd* 2>&1", path);
-
-        if ((fp = popen (cmd, "r")) != NULL) {
-            memset (rdata, 0x00, sizeof(rdata));
-            // 1 line read
-            fgets (rdata, sizeof(rdata), fp);
-            pclose (fp);
-
-            // find string "sd"
-            if ((ptr = strstr (rdata, "sd")) != NULL) {
-                // 0x00 -> 0x20 (space)
-                ptr[strlen(ptr)-1] = ' ';
-                strncpy (node, ptr, strlen(ptr));
-            }
-        }
-        return 0;
-    }
-    return -1;
-}
-
 //------------------------------------------------------------------------------
 static int usb_speed (const char *path)
 {
     FILE *fp;
-    char cmd[STR_PATH_LENGTH], node[STR_NAME_LENGTH];
+    char cmd[STR_PATH_LENGTH], rdata[STR_PATH_LENGTH];
 
     if (access (path, R_OK) == 0) {
         memset  (cmd, 0x00, sizeof(cmd));
-
-        if (find_node (path, node))     return 0;;
-
-        node[strlen(node)-1] = 0;
-
-        if (!strncmp("/dev/disk", path, strlen("/dev/disk")))
-            sprintf (cmd, "/sys/block/%s/device/../../../../speed", node);
-        else
-            sprintf (cmd, "%s/speed", path);
-
+        sprintf (cmd, "%s/speed", path);
         if ((fp = fopen (cmd, "r")) != NULL) {
-            memset (cmd, 0, sizeof(cmd));
-            fgets  (cmd, sizeof(cmd), fp);
+            memset (rdata, 0, sizeof(rdata));
+            fgets  (rdata, sizeof(rdata), fp);
             fclose (fp);
         }
-        return atoi (cmd);
+        return atoi (rdata);
     }
     return 0;
 }
 
 //------------------------------------------------------------------------------
+#if 0
+//------------------------------------------------------------------------------
+// USB Read / Write (16 Mbytes, 1 block count)
+//------------------------------------------------------------------------------
+//const char *USB_R_CHECK = "dd of=/dev/null bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync if=/dev/";
+//const char *USB_W_CHECK = "dd if=/dev/zero bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync of=/dev/";
+
+//
+// /sys/bus/usb/devices/ node에서 디스크를 찾아서 진행하는 방법 (Old : > 2026.10)
+//
 static int usb_rw (struct device_usb *p_usb)
 {
     FILE *fp;
-    char cmd[STR_PATH_LENGTH*2], node[STR_NAME_LENGTH];
+    char cmd[STR_PATH_LENGTH*2], rdata[STR_PATH_LENGTH], *ptr;
 
     if (!access (p_usb->path, F_OK)) {
-        memset  (cmd,  0x00, sizeof(cmd));
-        memset  (node, 0x00, sizeof(node));
-
-        if (find_node (p_usb->path, node))     return -1;;
-
+        memset  (cmd, 0x00, sizeof(cmd));
         sprintf (cmd, "%s%s 2>&1",
-            p_usb->rw ? USB_W_CHECK : USB_R_CHECK, node);
+            p_usb->rw ? USB_W_CHECK : USB_R_CHECK, p_usb->path);
 
         if ((fp = popen(cmd, "r")) != NULL) {
             while (1) {
-                char *ptr = NULL;
-                memset (cmd, 0, sizeof (cmd));
-                if ((fgets (cmd, sizeof (cmd), fp)) == NULL)
+                memset (rdata, 0, sizeof (rdata));
+                if ((fgets (rdata, sizeof (rdata), fp)) == NULL)
                     break;
-                if ((ptr = strstr (cmd, " MB/s")) != NULL) {
+                if ((ptr = strstr (rdata, " MB/s")) != NULL) {
+                    while (*ptr != ',') ptr--;
+                    pclose (fp);
+                    return atoi (ptr+1);
+                }
+            }
+            pclose (fp);
+        }
+        return 0;
+    }
+    return -1;
+}
+#endif
+
+//------------------------------------------------------------------------------
+//
+// /dev/disk/by-path node의 softlink를 통하여 진행하는 방법 (New version 2026.10)
+//
+//------------------------------------------------------------------------------
+// USB Read / Write (16 Mbytes, 1 block count)
+//------------------------------------------------------------------------------
+const char *USB_R_CHECK = "dd of=/dev/null bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync if=";
+const char *USB_W_CHECK = "dd if=/dev/zero bs=16M count=1 iflag=nocache,dsync oflag=nocache,dsync of=";
+
+static int usb_rw (struct device_usb *p_usb)
+{
+    FILE *fp;
+    char cmd[STR_PATH_LENGTH*2], rdata[STR_PATH_LENGTH], *ptr;
+
+    if (!access (p_usb->path, F_OK)) {
+        memset  (cmd, 0x00, sizeof(cmd));
+        sprintf (cmd, "%s%s 2>&1",
+            p_usb->rw ? USB_W_CHECK : USB_R_CHECK, p_usb->path);
+
+        if ((fp = popen(cmd, "r")) != NULL) {
+            while (1) {
+                memset (rdata, 0, sizeof (rdata));
+                if ((fgets (rdata, sizeof (rdata), fp)) == NULL)
+                    break;
+                if ((ptr = strstr (rdata, " MB/s")) != NULL) {
                     while (*ptr != ',') ptr--;
                     pclose (fp);
                     return atoi (ptr+1);
@@ -206,6 +203,7 @@ void *thread_func_usb (void *arg)
 
         usleep (100 * 1000);
     }
+
     p_usb->thread_en = 0;
     return arg;
 }
@@ -242,6 +240,7 @@ int usb_check (int dev_id, char *resp)
     }
     DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
     printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
+
     return status;
 }
 
