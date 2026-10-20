@@ -158,6 +158,10 @@ int device_resp_check (parse_resp_data_t *pdata)
             pdata->status_i = audio_data_check (pdata->did, pdata->resp_i);
             break;
 
+        /* USB Read Date가 0보다 큰 경우 데이터를 읽어온 것으로 인식하고 처리함. */
+        case eGID_USB:
+            return  (pdata->resp_i > 0) ? 1 : 0;
+
         /* not implement */
         case eGID_PWM: case eGID_GPIO:
         default:

@@ -187,6 +187,82 @@ static int usb_rw (struct device_usb *p_usb)
 void *thread_func_usb (void *arg)
 {
     struct device_usb *p_usb = (struct device_usb *)arg;
+    int retry = 3, rw_val = 0;
+
+    p_usb->thread_en = 1;
+
+    while (1) {
+        pthread_mutex_lock(&mutex_usb);
+
+        if (rw_val <= p_usb->rw_check[p_usb->rw])
+            rw_val = usb_rw (p_usb);
+
+        pthread_mutex_unlock(&mutex_usb);
+
+        if (rw_val > p_usb->rw_check[p_usb->rw]) {
+            p_usb->rw_value[p_usb->rw] = rw_val;
+            break;
+        }
+        /* 이동식 디스크 인식은 하였으나 속도가 정상적이지 않은 경우. 3번 정도 다시 시도함 */
+        if (rw_val > 0) {
+            if (!retry)  {
+                p_usb->rw_value[p_usb->rw] = rw_val;
+                break;
+            }
+            retry--;
+        }
+        usleep (200 * 1000);
+    }
+    p_usb->thread_en = 0;
+
+    return arg;
+}
+
+//------------------------------------------------------------------------------
+int usb_check (int dev_id, char *resp)
+{
+    int value = 0, status = 0, id = DEVICE_ID(dev_id);
+    struct device_usb *p_usb = &DeviceUSB[id];
+
+    switch (id) {
+        case eUSB_0: case eUSB_1: case eUSB_2:
+        case eUSB_3: case eUSB_4: case eUSB_5:
+
+            if ((DEVICE_ACTION(dev_id) == 0) || (DEVICE_ACTION(dev_id) == 1)) {
+                p_usb->rw = DEVICE_ACTION(dev_id);
+
+                if (!p_usb->thread_en) {
+                    pthread_create (&p_usb->thread, NULL, thread_func_usb, p_usb);
+
+                    do { usleep (100 * 1000); } while (!p_usb->thread_en);
+
+                    usleep (500 * 1000);
+                }
+                value  = p_usb->rw_value[p_usb->rw];
+                status = (value > p_usb->rw_check[p_usb->rw]) ? 1 : -1;
+                if (value)
+                    DEVICE_RESP_FORM_INT (resp, (status > 0) ? 'P' : 'F', value);
+                else
+                    DEVICE_RESP_FORM_INT (resp, (status > 0) ? 'P' : 'C', value);
+            } else {
+                value  = usb_speed (p_usb->path);
+                status = (value == p_usb->speed) ? 1 : -1;
+                DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
+            }
+            break;
+        default :
+            break;
+    }
+    printf ("%s : [size = %d] -> %s\n", __func__, (int)strlen(resp), resp);
+
+    return status;
+}
+
+//------------------------------------------------------------------------------
+#if 0
+void *thread_func_usb (void *arg)
+{
+    struct device_usb *p_usb = (struct device_usb *)arg;
     int retry = 5;
 
     p_usb->thread_en = 1;
@@ -243,6 +319,7 @@ int usb_check (int dev_id, char *resp)
 
     return status;
 }
+#endif
 
 //------------------------------------------------------------------------------
 void usb_grp_init (char *cfg)
@@ -268,6 +345,9 @@ void usb_grp_init (char *cfg)
                     if ((tok = strtok (NULL, ",")) != NULL)
                         DeviceUSB[did].speed = atoi(tok);
                     break;
+
+                    pthread_create (&DeviceUSB[did].thread, NULL,
+                        thread_func_usb, &DeviceUSB[did]);
 
                 default :
                     printf ("%s : error! unknown did = %d\n", __func__, atoi(tok));
