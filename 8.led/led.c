@@ -227,14 +227,19 @@ int led_check (int dev_id, char *resp)
     }
 
     if (status == 1) {
-        char resp_str[DEVICE_RESP_SIZE-2];
+        /*
+            ADC Port가 -1경우 Client register에 읽고/쓰기 값으로 정상 유무를 판단함.
+            광센서 Check를 하지 못하는 경우에 한함(Self test시 육안으로 확인)
+        */
+        if (!strncmp(DeviceLED[id].cname, "-1", strlen("-1"))) {
+            DEVICE_RESP_FORM_INT (resp, 'P' , value);
+        } else {
+            char resp_str[DEVICE_RESP_SIZE-2];
 
-        memset  (resp_str, 0, sizeof(resp_str));
-        sprintf (resp_str, "%s-%d", DeviceLED[id].cname,
+            memset  (resp_str, 0, sizeof(resp_str));
+            sprintf (resp_str, "%s-%d", DeviceLED[id].cname,
             DEVICE_ACTION(dev_id) ? DeviceLED[id].max : DeviceLED[id].min);
-
-        DEVICE_RESP_FORM_STR (resp, 'C', resp_str);
-
+        }
     } else {
         DEVICE_RESP_FORM_STR (resp, 'F', DeviceLED[id].cname);
     }
@@ -294,6 +299,7 @@ void led_grp_init (char *cfg)
                                     strncpy (ctl_str, tok, strlen(tok));
 
                                 led_write (ctl_path, ctl_str);
+
                                 break;
                             default:
                                 break;
