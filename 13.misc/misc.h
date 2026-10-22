@@ -23,8 +23,11 @@
 #define eMISC_CFG -1
 
 enum {
-    eMISC_ID0 = 0,  //SPI_BT = 0,
+    eMISC_ID0 = 0,  // SPI_BT = 0,
     eMISC_ID1,      // HP DETECT
+    eMISC_ID2,      // R1 FAN CONTROL
+    eMISC_ID3,      //
+    eMISC_ID4,      //
     eMISC_END
 };
 

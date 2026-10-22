@@ -43,6 +43,14 @@ static char spi_pass_str[STR_NAME_LENGTH] = { 0, };
 
 static char hpdet_str [STR_NAME_LENGTH] = { 0, };
 
+typedef struct fan_ctrl__t {
+    char    path [STR_PATH_LENGTH];
+    char    l_data[STR_NAME_LENGTH], h_data[STR_NAME_LENGTH];  /* fan data, fan count */
+    int     l_cnt, h_cnt;
+}   fan_ctrl_t;
+
+static fan_ctrl_t fan_ctrl;
+
 //------------------------------------------------------------------------------
 static void tolowerstr (char *p)
 {
@@ -217,6 +225,38 @@ void *thread_func_id1 (void *arg)
 }
 
 //------------------------------------------------------------------------------
+static int fan_read (const char *path)
+{
+    char rdata[16];
+    FILE *fp;
+
+    memset (rdata, 0, sizeof (rdata));
+
+    // led value get
+    if ((fp = fopen(path, "r")) != NULL) {
+        fread (rdata, 1, sizeof(rdata), fp);
+        fclose(fp);
+    }
+
+    return atoi(rdata);
+}
+
+//------------------------------------------------------------------------------
+static int fan_write (const char *path, const char *wdata)
+{
+    FILE *fp;
+    int w_size = 0;
+
+    // led value set
+    if ((fp = fopen(path, "w")) != NULL) {
+        w_size = fwrite (wdata, 1, strlen(wdata), fp);
+        fclose(fp);
+        sleep (1);
+    }
+    return (w_size == (int)strlen(wdata)) ? 1 : 0;
+}
+
+//------------------------------------------------------------------------------
 int misc_check (int dev_id, char *resp)
 {
     int value = 0, status = 0, id = DEVICE_ID(dev_id);
@@ -230,6 +270,33 @@ int misc_check (int dev_id, char *resp)
         case eMISC_ID1:
             status = DEVICE_ACTION(dev_id) ? HPDetIn : HPDetOut;
             value  = status;
+            break;
+        case eMISC_ID2:
+            {
+                char path[STR_PATH_LENGTH];
+                int  pos = strlen(fan_ctrl.path);
+
+                memset  (path, 0, sizeof(path));
+                strncpy (path, fan_ctrl.path, pos);
+                strncpy (&path[pos], "/pwm1", strlen("/pwm1"));
+                status = fan_write (path, DEVICE_ACTION(dev_id) ?
+                        (const char *)fan_ctrl.h_data : (const char *)fan_ctrl.l_data);
+                if (status) {
+                    memset  (path, 0, sizeof(path));
+                    strncpy (path, fan_ctrl.path, pos);
+                    strncpy (&path[pos], "/fan1_input", strlen("/fan1_input"));
+
+                    value = fan_read (path);
+                    if (DEVICE_ACTION(dev_id))
+                        status = (value > fan_ctrl.h_cnt) ? 1 : 0;
+                    else
+                        status = (value > fan_ctrl.l_cnt) ? 1 : 0;
+                }
+                printf ("%s : %d (%d) - %d(%d), %d(%d)\r\n",
+                    __func__, value, DEVICE_ACTION(dev_id),
+                    fan_ctrl.h_cnt, atoi(fan_ctrl.h_data),
+                    fan_ctrl.l_cnt, atoi(fan_ctrl.l_data));
+            }
             break;
         default :
             break;
@@ -266,6 +333,40 @@ void misc_grp_init (char *cfg)
 
                     pthread_create (&thread_id1, NULL, thread_func_id1, NULL);
                     break;
+
+                // MISC,02,R1,/sys/class/thermal/thermal_zone1,/sys/class/hwmon/hwmon0,50,500,150,2400,
+                case eMISC_ID2:
+                    if ((tok = strtok (NULL, ",")) != NULL) {
+                        if (!strncmp(tok, "R1", strlen("R1"))) {
+                            if ((tok = strtok(NULL, ",")) != NULL) {
+                                char ctl_path [STR_PATH_LENGTH];
+
+                                memset    (ctl_path, 0, sizeof(ctl_path));
+                                sprintf   (ctl_path, "%s/mode", tok);
+                                if (fan_write (ctl_path, "disabled")) {
+
+                                    memset (&fan_ctrl, 0, sizeof(fan_ctrl_t));
+                                    if ((tok = strtok(NULL, ",")) != NULL)
+                                        strncpy (fan_ctrl.path, tok, strlen(tok));
+                                    if ((tok = strtok(NULL, ",")) != NULL)
+                                        strncpy (fan_ctrl.l_data, tok, strlen(tok));
+                                    if ((tok = strtok(NULL, ",")) != NULL)
+                                        fan_ctrl.l_cnt  = atoi(tok);
+                                    if ((tok = strtok(NULL, ",")) != NULL)
+                                        strncpy (fan_ctrl.h_data, tok, strlen(tok));
+                                    if ((tok = strtok(NULL, ",")) != NULL)
+                                        fan_ctrl.h_cnt  = atoi(tok);
+
+                                    memset    ( ctl_path, 0, sizeof(ctl_path));
+                                    strncpy   ( ctl_path, fan_ctrl.path, strlen(fan_ctrl.path));
+                                    strncpy   (&ctl_path[strlen(fan_ctrl.path)], "/pwm1", strlen("/pwm1"));
+                                    fan_write ( ctl_path, "0");
+                                }
+                            }
+                        }
+                    }
+                    break;
+
                 default :
                     break;
             }
