@@ -67,6 +67,7 @@ struct device_ethernet {
     ODROID-M1S : 9001
     ODROID-M2  : 9002
     ODROID-C5  : 9003
+    ODROID-R1  : 9004
 */
     char server_ip_str [sizeof(struct sockaddr)+1];
     int  server_ip_int [4];   // aaa.bbb.ccc.ddd
