@@ -239,14 +239,14 @@ int usb_check (int dev_id, char *resp)
                     usleep (500 * 1000);
                 }
                 value  = p_usb->rw_value[p_usb->rw];
-                status = (value > p_usb->rw_check[p_usb->rw]) ? 1 : -1;
+                status = (value > p_usb->rw_check[p_usb->rw]) ? 1 : 0;
                 if (value)
                     DEVICE_RESP_FORM_INT (resp, (status > 0) ? 'P' : 'F', value);
                 else
                     DEVICE_RESP_FORM_INT (resp, (status > 0) ? 'P' : 'C', value);
             } else {
                 value  = usb_speed (p_usb->path);
-                status = (value == p_usb->speed) ? 1 : -1;
+                status = (value == p_usb->speed) ? 1 : 0;
                 DEVICE_RESP_FORM_INT (resp, (status == 1) ? 'P' : 'F', value);
             }
             break;
@@ -344,11 +344,11 @@ void usb_grp_init (char *cfg)
 
                     if ((tok = strtok (NULL, ",")) != NULL)
                         DeviceUSB[did].speed = atoi(tok);
-                    break;
 
                     pthread_create (&DeviceUSB[did].thread, NULL,
                         thread_func_usb, &DeviceUSB[did]);
 
+                    break;
                 default :
                     printf ("%s : error! unknown did = %d\n", __func__, atoi(tok));
                     break;
